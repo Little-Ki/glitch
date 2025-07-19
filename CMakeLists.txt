@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(cheat-t)
+project(glitch)
 
 add_subdirectory(module)
 add_subdirectory(library)
