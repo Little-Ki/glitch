@@ -72,7 +72,7 @@ namespace cl::pe {
             const auto name = reinterpret_cast<char*>(mod.base + name_table[i]);
             const auto index = index_table[i];
 
-            if (hash::fnv1a(name) != proc_name) {
+            if (hash::fnv1a(name) != proc) {
                 continue;
             }
 
