@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(RENDERER_BACKEND "D3D11" CACHE STRING "Renderer backend")
 
-set_property(CACHE RENDERER_BACKEND PROPERTY STRINGS D3D11 D3D10 D3D9)
+set_property(CACHE RENDERER_BACKEND PROPERTY STRINGS D3D12 D3D11 D3D10 D3D9)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/../library/include
@@ -18,12 +18,18 @@ include_directories(
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SOURCE)
 
-if(${RENDERER_BACKEND} STREQUAL "D3D11")
+if(${RENDERER_BACKEND} STREQUAL "D3D12")
+    list(APPEND SOURCE ${PROJECT_SOURCE_DIR}/../third_party/imgui/source/backends/imgui_impl_dx12.cpp)
+    list(APPEND SOURCE ${PROJECT_SOURCE_DIR}/src/menu_hooks/menu_hook_d3d12.cpp)
+elseif(${RENDERER_BACKEND} STREQUAL "D3D11")
     list(APPEND SOURCE ${PROJECT_SOURCE_DIR}/../third_party/imgui/source/backends/imgui_impl_dx11.cpp)
+    list(APPEND SOURCE ${PROJECT_SOURCE_DIR}/src/menu_hooks/menu_hook_d3d11.cpp)
 elseif(${RENDERER_BACKEND} STREQUAL "D3D10")
     list(APPEND SOURCE ${PROJECT_SOURCE_DIR}/../third_party/imgui/source/backends/imgui_impl_dx10.cpp)
+    list(APPEND SOURCE ${PROJECT_SOURCE_DIR}/src/menu_hooks/menu_hook_d3d10.cpp)
 elseif(${RENDERER_BACKEND} STREQUAL "D3D9")
     list(APPEND SOURCE ${PROJECT_SOURCE_DIR}/../third_party/imgui/source/backends/imgui_impl_dx9.cpp)
+    list(APPEND SOURCE ${PROJECT_SOURCE_DIR}/src/menu_hooks/menu_hook_d3d9.cpp)
 endif()
 
 add_library(${PROJECT_NAME} SHARED main.cpp ${SOURCE} ${SOURCE_BACKEND}) 
