@@ -6,6 +6,7 @@
 #include <dxgi1_4.h>
 #include <d3d12.h>
 #include <iostream>
+#include <vector>
 
 #include "lib_hook.h"
 #include "menu.h"
@@ -20,7 +21,7 @@
 
 namespace ct::menu::hook {
 
-	using PresentFn = HRESULT(__stdcall*)(IDXGISwapChain*, UINT, UINT);
+	using PresentFn = HRESULT(__stdcall*)(IDXGISwapChain3*, UINT, UINT);
 	using ExecuteCommandListFn = void(__stdcall*)(ID3D12CommandQueue*, UINT, ID3D12CommandList**);
 
 	static PresentFn oPresent = nullptr;
@@ -29,123 +30,125 @@ namespace ct::menu::hook {
 	static ExecuteCommandListFn oExecCmdList = nullptr;
 	static ExecuteCommandListFn tExecCmdList = nullptr;
 
-	static ID3D12CommandQueue* gCommandQueue = nullptr;
+	struct D3D12Environment {
 
-	class D3D12HeapAllocator
-	{
-		ID3D12DescriptorHeap*		heap = nullptr;
-		D3D12_DESCRIPTOR_HEAP_TYPE  type = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
-		D3D12_CPU_DESCRIPTOR_HANDLE start_cpu;
-		D3D12_GPU_DESCRIPTOR_HANDLE start_gpu;
-		UINT                        handle_increment;
-		ImVector<int>               free_indices;
-	public:
+		struct FrameContext {
+			ID3D12CommandAllocator* command_allocator;
+			ID3D12Resource* resource;
+			D3D12_CPU_DESCRIPTOR_HANDLE desc_handle;
+		};
 
-		void create(ID3D12Device* device, ID3D12DescriptorHeap* heap)
-		{
-			IM_ASSERT(heap == nullptr && free_indices.empty());
-			this->heap = heap;
-			D3D12_DESCRIPTOR_HEAP_DESC desc = heap->GetDesc();
-			type = desc.Type;
-			start_cpu = heap->GetCPUDescriptorHandleForHeapStart();
-			start_gpu = heap->GetGPUDescriptorHandleForHeapStart();
-			handle_increment = device->GetDescriptorHandleIncrementSize(type);
-			free_indices.reserve((int)desc.NumDescriptors);
-			for (int n = desc.NumDescriptors; n > 0; n--)
-				free_indices.push_back(n - 1);
-		}
+		ID3D12CommandQueue* command_queue = nullptr;
 
-		void destroy()
-		{
-			heap = nullptr;
-			free_indices.clear();
-		}
+		ID3D12DescriptorHeap* desc_back_buffer;;
+		ID3D12DescriptorHeap* desc_imgui_render;
+		ID3D12GraphicsCommandList* command_list;
+		ID3D12CommandQueue* command_queue;
 
-		void alloc(D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_desc_handle)
-		{
-			IM_ASSERT(free_indices.Size > 0);
-			int idx = free_indices.back();
-			free_indices.pop_back();
-			out_cpu_desc_handle->ptr = start_cpu.ptr + (idx * handle_increment);
-			out_gpu_desc_handle->ptr = start_gpu.ptr + (idx * handle_increment);
-		}
-
-		void free(D3D12_CPU_DESCRIPTOR_HANDLE out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE out_gpu_desc_handle)
-		{
-			int cpu_idx = (int)((out_cpu_desc_handle.ptr - start_cpu.ptr) / handle_increment);
-			int gpu_idx = (int)((out_gpu_desc_handle.ptr - start_gpu.ptr) / handle_increment);
-			IM_ASSERT(cpu_idx == gpu_idx);
-			free_indices.push_back(cpu_idx);
-		}
+		uint32_t buffer_count = -1;
+		std::vector<FrameContext> frames;
 	};
 
-	static void __stdcall hkExecuteCommandList(ID3D12CommandQueue* self, UINT count, ID3D12CommandList** list) {
-		if (gCommandQueue != self) {
-			gCommandQueue = self;
+	static D3D12Environment env;
+
+	static void __stdcall hkExecuteCommandList(ID3D12CommandQueue* sc, UINT count, ID3D12CommandList** list) {
+		if (!env.command_queue) {
+			env.command_queue = sc;
 		}
 
-		tExecCmdList(self, count, list);
+		tExecCmdList(sc, count, list);
 	}
 
-	static HRESULT __stdcall hkPresent(IDXGISwapChain* self, UINT sync_interval, UINT flags)
+	static HRESULT __stdcall hkPresent(IDXGISwapChain3* sc, UINT interval, UINT flags)
 	{
-
 		static bool init = false;
 		static bool show_demo = true;
-
-		static D3D12HeapAllocator allocator;
 
 		static ID3D12DescriptorHeap* srv_heap = nullptr;
 
 		DXGI_SWAP_CHAIN_DESC desc;
+		ID3D12Device* device = nullptr;
 
-		ID3D12Device* device{ nullptr };
-
-		self->GetDesc(&desc);
-		self->GetDevice(__uuidof(ID3D12Device), (void**)&device);
+		sc->GetDesc(&desc);
+		sc->GetDevice(__uuidof(ID3D12Device), (void**)&device);
 
 		if (!init)
 		{
-			if (cmd_queue) {
+			if (env.command_queue) {
 
-				ImGui_ImplDX12_InitInfo init_info{};
+				D3D12_DESCRIPTOR_HEAP_DESC hd = {};
+
 				{
-					std::memset(&init_info, 0, sizeof(init_info));
-					init_info.Device = device;
-					init_info.CommandQueue = cmd_queue;
-					init_info.NumFramesInFlight = 2;
-					init_info.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-					init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
-					init_info.SrvDescriptorHeap = nullptr;
-					init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) { return allocator.alloc(out_cpu_handle, out_gpu_handle); };
-					init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) { return allocator.free(cpu_handle, gpu_handle); };
-					
+
+					hd.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+					hd.NumDescriptors = desc.BufferCount;
+					hd.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+					env.frames.resize(desc.BufferCount);
+
+					if (device->CreateDescriptorHeap(&hd, IID_PPV_ARGS(&env.desc_imgui_render)) != S_OK)
+						return tPresent(sc, interval, flags);
 				}
 
-				if (device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&srv_heap)) != S_OK)
-					return false;
+				{
+					hd.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+					hd.NumDescriptors = desc.BufferCount;
+					hd.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+					hd.NodeMask = 1;
+
+					if (device->CreateDescriptorHeap(&hd, IID_PPV_ARGS(&env.desc_back_buffer)) != S_OK)
+						return tPresent(sc, interval, flags);
+				}
+
+				ID3D12CommandAllocator* cmd_allocator;
+				if (device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&cmd_allocator)) != S_OK)
+					return tPresent(sc, interval, flags);
+
+				for (size_t i = 0; i < desc.BufferCount; i++) {
+					env.frames[i].command_allocator = cmd_allocator;
+				}
+
+				if (device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmd_allocator, NULL, IID_PPV_ARGS(&env.command_list)) != S_OK ||
+					env.command_list->Close() != S_OK)
+					return tPresent(sc, interval, flags);
+
+				const auto rtv_desc_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+				D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = env.desc_back_buffer->GetCPUDescriptorHandleForHeapStart();
+
+
+				for (size_t i = 0; i < desc.BufferCount; i++) {
+					ID3D12Resource* back_buffer = nullptr;
+					env.frames[i].desc_handle = rtv_handle;
+					sc->GetBuffer(i, IID_PPV_ARGS(&back_buffer));
+					device->CreateRenderTargetView(back_buffer, nullptr, rtv_handle);
+					env.frames[i].resource = back_buffer;
+					rtv_handle.ptr += rtv_desc_size;
+				}
 
 				ImGui_ImplWin32_EnableDpiAwareness();
-				ImGui_ImplDX12_Init(&init_info);
+				ImGui_ImplDX12_Init(
+					device, 
+					desc.BufferCount, 
+					DXGI_FORMAT_R8G8B8A8_UNORM, 
+					env.desc_imgui_render, 
+					env.desc_imgui_render->GetCPUDescriptorHandleForHeapStart(), 
+					env.desc_imgui_render->GetGPUDescriptorHandleForHeapStart()
+				);
+				ImGui_ImplDX12_CreateDeviceObjects();
 
 				menu::win32::install(desc.OutputWindow);
 
 				ImGui::CreateContext();
 				ImGui_ImplWin32_Init(desc.OutputWindow);
-				ImGui_ImplDX11_Init(device, context);
 
 				init = true;
 			}
 		}
 		else {
 
-			self->GetBuffer(0, IID_PPV_ARGS(&back_buffer));
+			if (env.command_queue) {
 
-			if (back_buffer) {
-				device->CreateRenderTargetView(back_buffer, nullptr, &rt_view);
-				back_buffer->Release();
-
-				ImGui_ImplDX11_NewFrame();
+				ImGui_ImplDX12_NewFrame();
 				ImGui_ImplWin32_NewFrame();
 				ImGui::NewFrame();
 
@@ -154,17 +157,38 @@ namespace ct::menu::hook {
 				//menu::render();
 
 				ImGui::EndFrame();
+
+				auto& frame = env.frames[sc->GetCurrentBackBufferIndex()];
+				frame.command_allocator->Reset();
+
+				D3D12_RESOURCE_BARRIER barrier;
+				{
+					std::memset(&barrier, 0, sizeof(barrier));
+					barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+					barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+					barrier.Transition.pResource = frame.resource;
+					barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+					barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+					barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+				}
+
+				env.command_list->Reset(frame.command_allocator, nullptr);
+				env.command_list->ResourceBarrier(1, nullptr);
+				env.command_list->OMSetRenderTargets(1, &frame.desc_handle, FALSE, nullptr);
+				env.command_list->SetDescriptorHeaps(1, &env.desc_imgui_render);
+
 				ImGui::Render();
+				ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), env.command_list);
 
-				context->OMSetRenderTargets(1, &rt_view, nullptr);
-
-				ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-
-				RELEASE(rt_view);
+				barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+				barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+				env.command_list->ResourceBarrier(1, &barrier);
+				env.command_list->Close();
+				env.command_queue->ExecuteCommandLists(1, reinterpret_cast<ID3D12CommandList* const*>(&env.command_list));
 			}
 		}
 
-		return tPresent(self, sync_interval, flags);
+		return tPresent(sc, interval, flags);
 	}
 
 	bool install() {
@@ -240,16 +264,19 @@ namespace ct::menu::hook {
 			goto fail;
 		}
 
-		void** vmt = *(void***)swapchain;
+		void** vmt0 = *(void***)swapchain;
+		void** vmt1 = *(void***)cmd_queue;
 
-		oPresent = reinterpret_cast<PresentFn>(vmt[8]);
+		oPresent = reinterpret_cast<PresentFn>(vmt0[8]);
+		oExecCmdList = reinterpret_cast<ExecuteCommandListFn>(vmt1[10]);
 
 		RELEASE(device);
 		RELEASE(cmd_queue);
 		RELEASE(cmd_allocator);
 		RELEASE(cmd_list);
 		RELEASE(swapchain);
-		return cl::hook::create(oPresent, hkPresent, (void**)(&tPresent));
+		return cl::hook::create(oPresent, hkPresent, (void**)(&tPresent)) &&
+			cl::hook::create(oExecCmdList, hkExecuteCommandList, (void**)(&tExecCmdList));
 
 	fail:
 		RELEASE(device);
@@ -262,6 +289,7 @@ namespace ct::menu::hook {
 
 	void uninstall() {
 		cl::hook::release(oPresent);
+		cl::hook::release(oExecCmdList);
 		menu::win32::uninstall();
 	}
 
