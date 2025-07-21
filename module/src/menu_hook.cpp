@@ -15,7 +15,7 @@
 #pragma comment(lib, "d3dcompiler.lib")
 
 #include "imgui.h"
-#include "menu_imgui_impl.h"
+#include "imgui_impl_dx11.h"
 #include "menu_imgui_win32.h"
 
 namespace ct::menu::hook {
