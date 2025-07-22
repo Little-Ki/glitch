@@ -25,10 +25,7 @@ namespace ct::menu::hook {
 	using ExecuteCommandListFn = void(__stdcall*)(ID3D12CommandQueue*, UINT, ID3D12CommandList**);
 
 	static PresentFn oPresent = nullptr;
-	static PresentFn tPresent = nullptr;
-
 	static ExecuteCommandListFn oExecCmdList = nullptr;
-	static ExecuteCommandListFn tExecCmdList = nullptr;
 
 	struct D3D12Environment {
 
@@ -56,7 +53,7 @@ namespace ct::menu::hook {
 			env.command_queue = sc;
 		}
 
-		tExecCmdList(sc, count, list);
+		oExecCmdList(sc, count, list);
 	}
 
 	static HRESULT __stdcall hkPresent(IDXGISwapChain3* sc, UINT interval, UINT flags)
@@ -126,6 +123,8 @@ namespace ct::menu::hook {
 				}
 
 				ImGui_ImplWin32_EnableDpiAwareness();
+				ImGui_ImplWin32_Init(desc.OutputWindow);
+				
 				ImGui_ImplDX12_Init(
 					device, 
 					desc.BufferCount, 
@@ -139,7 +138,6 @@ namespace ct::menu::hook {
 				menu::win32::install(desc.OutputWindow);
 
 				ImGui::CreateContext();
-				ImGui_ImplWin32_Init(desc.OutputWindow);
 
 				init = true;
 			}
@@ -188,7 +186,7 @@ namespace ct::menu::hook {
 			}
 		}
 
-		return tPresent(sc, interval, flags);
+		return oPresent(sc, interval, flags);
 	}
 
 	bool install() {
@@ -267,16 +265,13 @@ namespace ct::menu::hook {
 		void** vmt0 = *(void***)swapchain;
 		void** vmt1 = *(void***)cmd_queue;
 
-		oPresent = reinterpret_cast<PresentFn>(vmt0[8]);
-		oExecCmdList = reinterpret_cast<ExecuteCommandListFn>(vmt1[10]);
-
 		RELEASE(device);
 		RELEASE(cmd_queue);
 		RELEASE(cmd_allocator);
 		RELEASE(cmd_list);
 		RELEASE(swapchain);
-		return cl::hook::create(oPresent, hkPresent, (void**)(&tPresent)) &&
-			cl::hook::create(oExecCmdList, hkExecuteCommandList, (void**)(&tExecCmdList));
+		return cl::hook::create(vmt0[8], hkPresent, (void**)(&oPresent)) &&
+			cl::hook::create(vmt1[10], hkExecuteCommandList, (void**)(&oExecCmdList));
 
 	fail:
 		RELEASE(device);
@@ -288,8 +283,6 @@ namespace ct::menu::hook {
 	}
 
 	void uninstall() {
-		cl::hook::release(oPresent);
-		cl::hook::release(oExecCmdList);
 		menu::win32::uninstall();
 	}
 

@@ -23,7 +23,6 @@ namespace ct::menu::hook {
 	using PresentFn = HRESULT(__stdcall*)(IDXGISwapChain*, UINT, UINT);
 
 	static PresentFn oPresent = nullptr;
-	static PresentFn tPresent = nullptr;
 
 	static HRESULT __stdcall hkPresent(IDXGISwapChain* self, UINT sync_interval, UINT flags)
 	{
@@ -115,16 +114,13 @@ namespace ct::menu::hook {
 
 		void** vmt = *(void***)swapchain;
 
-		oPresent = reinterpret_cast<PresentFn>(vmt[8]);
-
 		RELEASE(swapchain);
 		RELEASE(device);
 
-		return cl::hook::create(oPresent, hkPresent, (void**)(&tPresent));
+		return cl::hook::create(vmt[8], hkPresent, (void**)(&oPresent));
 	}
 
 	void uninstall() {
-		cl::hook::release(oPresent);
 		menu::win32::uninstall();
 	}
 

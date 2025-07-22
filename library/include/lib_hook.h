@@ -4,8 +4,8 @@
 
 namespace cl::hook {
 
-    bool create(void *src, void *detour, void **tramp);
+    bool create(void *function, void *detour, void **proxy);
 
-    void release(void *src);
+    void releaseAll();
 
 }

@@ -24,15 +24,12 @@ namespace ct::menu::hook {
 	using EndSceneFn = HRESULT(__stdcall*)(IDirect3DDevice9*);
 
 	static ResetFn oReset = nullptr;
-	static ResetFn tReset = nullptr;
-
 	static EndSceneFn oEndScene = nullptr;
-	static EndSceneFn tEndScene = nullptr;
 
 	static HRESULT __stdcall hkReset(IDirect3DDevice9* self, D3DPRESENT_PARAMETERS* params)
 	{
 		ImGui_ImplDX9_InvalidateDeviceObjects();
-		long result = tReset(self, params);
+		long result = oReset(self, params);
 		ImGui_ImplDX9_CreateDeviceObjects();
 
 		return result;
@@ -71,7 +68,7 @@ namespace ct::menu::hook {
 			ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 		}
 
-		return tEndScene(self);
+		return oEndScene(self);
 	}
 
 	bool install() {
@@ -112,19 +109,15 @@ namespace ct::menu::hook {
 
 		void** vmt = *(void***)device;
 
-		oReset = reinterpret_cast<ResetFn>(vmt[16]);
-		oEndScene = reinterpret_cast<EndSceneFn>(vmt[42]);
-
 		RELEASE(device);
 		RELEASE(dx9);
 
-		return cl::hook::create(oReset, hkReset, (void**)(&tReset)) &&
-			cl::hook::create(oEndScene, hkEndScene, (void**)(&tEndScene));
+		return cl::hook::create(vmt[16], hkReset, (void**)(&oReset)) &&
+			cl::hook::create(vmt[42], hkEndScene, (void**)(&oEndScene));
 	}
 
 	void uninstall() {
-		cl::hook::release(oReset);
-		cl::hook::release(oEndScene);
+		cl::hook::releaseAll();
 		menu::win32::uninstall();
 	}
 
