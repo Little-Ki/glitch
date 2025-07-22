@@ -16,7 +16,7 @@
 
 #include "imgui.h"
 #include "imgui_impl_dx11.h"
-#include "menu_imgui_win32.h"
+#include "imgui_impl_win32.h"
 
 namespace ct::menu::hook {
 
@@ -50,6 +50,11 @@ namespace ct::menu::hook {
 			menu::win32::install(desc.OutputWindow);
 
 			ImGui::CreateContext();
+
+			auto& io = ImGui::GetIO();
+			io.IniFilename = nullptr;
+			io.LogFilename = nullptr;
+
 			ImGui_ImplWin32_Init(desc.OutputWindow);
 			ImGui_ImplDX11_Init(device, context);
 

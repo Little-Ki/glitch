@@ -18,6 +18,8 @@ include_directories(
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SOURCE)
 
+list(APPEND SOURCE ${PROJECT_SOURCE_DIR}/../third_party/imgui/source/backends/imgui_impl_win32.cpp)
+
 if(${RENDERER_BACKEND} STREQUAL "D3D12")
     list(APPEND SOURCE ${PROJECT_SOURCE_DIR}/../third_party/imgui/source/backends/imgui_impl_dx12.cpp)
     list(APPEND SOURCE ${PROJECT_SOURCE_DIR}/src/menu_hooks/menu_hook_dx12.cpp)

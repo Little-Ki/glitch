@@ -1,10 +1,14 @@
 #include "menu_hook.h"
 
-#define RELEASE(p) if (p) { p->Release(); p = nullptr; } 
+#define RELEASE(p)    \
+    if (p) {          \
+        p->Release(); \
+        p = nullptr;  \
+    }
 
 #include <Windows.h>
-#include <dxgi.h>
 #include <d3d10.h>
+#include <dxgi.h>
 #include <iostream>
 
 #include "lib_hook.h"
@@ -20,108 +24,109 @@
 
 namespace ct::menu::hook {
 
-	using PresentFn = HRESULT(__stdcall*)(IDXGISwapChain*, UINT, UINT);
+    using PresentFn = HRESULT(__stdcall *)(IDXGISwapChain *, UINT, UINT);
 
-	static PresentFn oPresent = nullptr;
+    static PresentFn oPresent = nullptr;
 
-	static HRESULT __stdcall hkPresent(IDXGISwapChain* self, UINT sync_interval, UINT flags)
-	{
+    static HRESULT __stdcall hkPresent(IDXGISwapChain *self, UINT sync_interval, UINT flags) {
 
-		static bool init = false;
-		static bool show_demo = true;
+        static bool init = false;
+        static bool show_demo = true;
 
-		static ID3D10RenderTargetView* rt_view{ nullptr };
-		
-		DXGI_SWAP_CHAIN_DESC desc;
+        static ID3D10RenderTargetView *rt_view{nullptr};
 
-		ID3D10Device* device{ nullptr };
+        DXGI_SWAP_CHAIN_DESC desc;
 
-		ID3D10Texture2D* back_buffer{ nullptr };
+        ID3D10Device *device{nullptr};
 
-		self->GetDesc(&desc);
-		self->GetDevice(__uuidof(ID3D10Device), (void**)&device);
+        ID3D10Texture2D *back_buffer{nullptr};
 
-		if (!init)
-		{
-			ImGui_ImplWin32_EnableDpiAwareness();
+        self->GetDesc(&desc);
+        self->GetDevice(__uuidof(ID3D10Device), (void **)&device);
 
-			menu::win32::install(desc.OutputWindow);
+        if (!init) {
+            ImGui_ImplWin32_EnableDpiAwareness();
 
-			ImGui::CreateContext();
-			ImGui_ImplWin32_Init(desc.OutputWindow);
-			ImGui_ImplDX10_Init(device);
+            menu::win32::install(desc.OutputWindow);
 
-			init = true;
-		}
-		else {
+            ImGui::CreateContext();
 
-			self->GetBuffer(0, IID_PPV_ARGS(&back_buffer));
+            auto &io = ImGui::GetIO();
+            io.IniFilename = nullptr;
+            io.LogFilename = nullptr;
 
-			if (back_buffer) {
-				device->CreateRenderTargetView(back_buffer, nullptr, &rt_view);
-				back_buffer->Release();
+            ImGui_ImplWin32_Init(desc.OutputWindow);
+            ImGui_ImplDX10_Init(device);
 
-				ImGui_ImplDX10_NewFrame();
-				ImGui_ImplWin32_NewFrame();
-				ImGui::NewFrame();
+            init = true;
+        } else {
 
-				ImGui::ShowDemoWindow(&show_demo);
+            self->GetBuffer(0, IID_PPV_ARGS(&back_buffer));
 
-				//menu::render();
+            if (back_buffer) {
+                device->CreateRenderTargetView(back_buffer, nullptr, &rt_view);
+                back_buffer->Release();
 
-				ImGui::EndFrame();
-				ImGui::Render();
+                ImGui_ImplDX10_NewFrame();
+                ImGui_ImplWin32_NewFrame();
+                ImGui::NewFrame();
 
-				device->OMSetRenderTargets(1, &rt_view, nullptr);
+                ImGui::ShowDemoWindow(&show_demo);
 
-				ImGui_ImplDX10_RenderDrawData(ImGui::GetDrawData());
+                // menu::render();
 
-				RELEASE(rt_view);
-			}
-		}
+                ImGui::EndFrame();
+                ImGui::Render();
 
-		return tPresent(self, sync_interval, flags);
-	}
+                device->OMSetRenderTargets(1, &rt_view, nullptr);
 
-	bool install() {
-		ID3D10Device* device = nullptr;
-		IDXGISwapChain* swapchain = nullptr;
-		D3D_FEATURE_LEVEL featureLevel;
-		DXGI_SWAP_CHAIN_DESC sd{ 0 };
+                ImGui_ImplDX10_RenderDrawData(ImGui::GetDrawData());
 
-		sd.BufferCount = 1;
-		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		sd.BufferDesc.Height = 800;
-		sd.BufferDesc.Width = 600;
-		sd.BufferDesc.RefreshRate = { 60, 1 };
-		sd.OutputWindow = GetForegroundWindow();
-		sd.Windowed = TRUE;
-		sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-		sd.SampleDesc.Count = 1;
-		sd.SampleDesc.Quality = 0;
+                RELEASE(rt_view);
+            }
+        }
 
-		HRESULT hr = D3D10CreateDeviceAndSwapChain(
-			nullptr,
-			D3D10_DRIVER_TYPE_HARDWARE,
-			nullptr, 0, D3D10_SDK_VERSION, 
-			&sd, &swapchain, &device
-		);
+        return tPresent(self, sync_interval, flags);
+    }
 
-		if (FAILED(hr)) {
-			return false;
-		}
+    bool install() {
+        ID3D10Device *device = nullptr;
+        IDXGISwapChain *swapchain = nullptr;
+        D3D_FEATURE_LEVEL featureLevel;
+        DXGI_SWAP_CHAIN_DESC sd{0};
 
-		void** vmt = *(void***)swapchain;
+        sd.BufferCount = 1;
+        sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        sd.BufferDesc.Height = 800;
+        sd.BufferDesc.Width = 600;
+        sd.BufferDesc.RefreshRate = {60, 1};
+        sd.OutputWindow = GetForegroundWindow();
+        sd.Windowed = TRUE;
+        sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+        sd.SampleDesc.Count = 1;
+        sd.SampleDesc.Quality = 0;
 
-		RELEASE(swapchain);
-		RELEASE(device);
+        HRESULT hr = D3D10CreateDeviceAndSwapChain(
+            nullptr,
+            D3D10_DRIVER_TYPE_HARDWARE,
+            nullptr, 0, D3D10_SDK_VERSION,
+            &sd, &swapchain, &device);
 
-		return cl::hook::create(vmt[8], hkPresent, (void**)(&oPresent));
-	}
+        if (FAILED(hr)) {
+            return false;
+        }
 
-	void uninstall() {
-		menu::win32::uninstall();
-	}
+        void **vmt = *(void ***)swapchain;
+
+        RELEASE(swapchain);
+        RELEASE(device);
+
+        return cl::hook::create(vmt[8], hkPresent, (void **)(&oPresent));
+    }
+
+    void uninstall() {
+        menu::win32::uninstall();
+    }
 
 }
