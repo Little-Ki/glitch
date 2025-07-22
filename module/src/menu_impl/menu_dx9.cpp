@@ -1,4 +1,4 @@
-#include "menu_hook.h"
+#include "menu.h"
 
 #define RELEASE(p)    \
     if (p) {          \
@@ -12,17 +12,15 @@
 #include <iostream>
 
 #include "lib_hook.h"
-#include "menu.h"
-#include "menu_win32.h"
 
 #pragma comment(lib, "d3d19.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
 #include "imgui.h"
 #include "imgui_impl_dx9.h"
-#include "menu_imgui_win32.h"
+#include "imgui_impl_win32.h"
 
-namespace ct::menu::hook {
+namespace ct::menu {
 
     using ResetFn = HRESULT(__stdcall *)(IDirect3DDevice9 *, D3DPRESENT_PARAMETERS *);
     using EndSceneFn = HRESULT(__stdcall *)(IDirect3DDevice9 *);
@@ -47,7 +45,7 @@ namespace ct::menu::hook {
             self->GetCreationParameters(&params);
             ImGui_ImplWin32_EnableDpiAwareness();
 
-            menu::win32::install(params.hFocusWindow);
+            menu::watch(params.hFocusWindow);
 
             ImGui::CreateContext();
 
@@ -121,8 +119,7 @@ namespace ct::menu::hook {
     }
 
     void uninstall() {
-        cl::hook::releaseAll();
-        menu::win32::uninstall();
+        menu::unwatch();
     }
 
 }

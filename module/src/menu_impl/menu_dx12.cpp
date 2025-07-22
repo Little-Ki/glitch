@@ -1,4 +1,4 @@
-#include "menu_hook.h"
+#include "menu.h"
 
 #define RELEASE(p)    \
     if (p) {          \
@@ -13,8 +13,6 @@
 #include <vector>
 
 #include "lib_hook.h"
-#include "menu.h"
-#include "menu_win32.h"
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -23,7 +21,7 @@
 #include "imgui_impl_dx12.h"
 #include "imgui_impl_win32.h"
 
-namespace ct::menu::hook {
+namespace ct::menu {
 
     using PresentFn = HRESULT(__stdcall *)(IDXGISwapChain3 *, UINT, UINT);
     using ExecuteCommandListFn = void(__stdcall *)(ID3D12CommandQueue *, UINT, ID3D12CommandList **);
@@ -143,7 +141,7 @@ namespace ct::menu::hook {
 
                 ImGui_ImplDX12_CreateDeviceObjects();
 
-                menu::win32::install(desc.OutputWindow);
+                menu::watch(desc.OutputWindow);
 
                 init = true;
             }
@@ -278,7 +276,7 @@ namespace ct::menu::hook {
     }
 
     void uninstall() {
-        menu::win32::uninstall();
+        menu::unwatch();
     }
 
 }

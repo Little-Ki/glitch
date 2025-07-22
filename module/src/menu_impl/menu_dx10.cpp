@@ -1,4 +1,4 @@
-#include "menu_hook.h"
+#include "menu.h"
 
 #define RELEASE(p)    \
     if (p) {          \
@@ -12,17 +12,15 @@
 #include <iostream>
 
 #include "lib_hook.h"
-#include "menu.h"
-#include "menu_win32.h"
 
 #pragma comment(lib, "d3d10.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
 #include "imgui.h"
 #include "imgui_impl_dx10.h"
-#include "menu_imgui_win32.h"
+#include "imgui_impl_win32.h"
 
-namespace ct::menu::hook {
+namespace ct::menu {
 
     using PresentFn = HRESULT(__stdcall *)(IDXGISwapChain *, UINT, UINT);
 
@@ -47,7 +45,7 @@ namespace ct::menu::hook {
         if (!init) {
             ImGui_ImplWin32_EnableDpiAwareness();
 
-            menu::win32::install(desc.OutputWindow);
+            menu::watch(desc.OutputWindow);
 
             ImGui::CreateContext();
 
@@ -126,7 +124,7 @@ namespace ct::menu::hook {
     }
 
     void uninstall() {
-        menu::win32::uninstall();
+        menu::unwatch();
     }
 
 }
