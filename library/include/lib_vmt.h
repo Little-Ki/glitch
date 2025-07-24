@@ -42,8 +42,6 @@ namespace cl::vmt {
 	public:
 		VMT(void* base);
 
-		static std::weak_ptr<VMT> create(void* base);
-
 		bool attach();
 
 		bool detach();
@@ -66,5 +64,11 @@ namespace cl::vmt {
 		}
 
 	};
+
+	template<typename T = uintptr_t>
+	__forceinline T method(uintptr_t base, size_t index) {
+		auto table = *reinterpret_cast<uintptr_t ***>(base);
+		return reinterpret_cast<T>(table[index]);
+	}
 
 }
