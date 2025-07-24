@@ -1,30 +1,14 @@
 #include "lib_vmt.h"
+#include "lib_memory.h"
 
 #include <Windows.h>
 #include <unordered_map>
 
 namespace cl::vmt {
 
-	static bool validatePtr(uintptr_t address) {
-		if (!address)
-			return false;
-
-		MEMORY_BASIC_INFORMATION mbi;
-
-		if (!VirtualQuery(reinterpret_cast<const void*>(address), &mbi, sizeof mbi))
-			return false;
-
-		if (mbi.Protect & PAGE_EXECUTE_READWRITE ||
-			mbi.Protect & PAGE_EXECUTE_READ) {
-			return true;
-		}
-
-		return false;
-	}
-
 	__forceinline static size_t methodCount(uintptr_t* vmt) {
 		size_t i = 0;
-		while (validatePtr(vmt[i]))
+		while (cl::memory::isValid(vmt[i]))
 			++i;
 		return i;
 	}

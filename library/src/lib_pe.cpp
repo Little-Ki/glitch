@@ -1,5 +1,6 @@
 #include "lib_pe.h"
 #include "lib_nt.h"
+#include "lib_memory.h"
 
 #include <algorithm>
 
@@ -80,5 +81,16 @@ namespace cl::pe {
         }
 
         return 0;
+    }
+
+    bool headless(void* handle)
+    {
+        auto dos = reinterpret_cast<PIMAGE_DOS_HEADER>(handle);
+        auto o_dos = *dos;
+
+        std::memset(&o_dos, 0, sizeof(IMAGE_DOS_HEADER));
+        o_dos.e_lfanew = dos->e_lfanew;
+
+        return cl::memory::write(handle, &o_dos, sizeof(IMAGE_DOS_HEADER));
     }
 }

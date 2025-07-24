@@ -3,7 +3,6 @@
 #include <string>
 
 namespace cl::pe {
-
     struct Module {
         uintptr_t base;
         uintptr_t size;
@@ -18,4 +17,5 @@ namespace cl::pe {
         return reinterpret_cast<T>(getExport(mod, proc));
     };
 
+    bool headless(void* handle);
 }
