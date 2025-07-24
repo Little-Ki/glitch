@@ -6,10 +6,12 @@
 #include "lib_pe.h"
 #include "ct_menu.h"
 #include "ct_bypass.h"
+#include "ct_feature.h"
 
 static void MainThread(void* handle) {
 	ct::menu::install();
 	ct::bypass::install();
+	ct::feature::install();
 	cl::pe::headless(handle);
 
 	while (!GetAsyncKeyState(VK_END));

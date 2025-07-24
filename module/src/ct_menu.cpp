@@ -5,6 +5,8 @@
 #include "imgui.h"
 #include "backends/imgui_impl_win32.h"
 
+#include "ct_feature.h"
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace ct::menu {
@@ -16,12 +18,16 @@ namespace ct::menu {
 	void render()
 	{
 		ImGui::SetNextWindowPos({ 100, 100 });
-		ImGui::Begin("Hello");
+		ImGui::Begin("Window");
 
 		ImGui::Text("Hello");
 		ImGui::Button("World!");
 
 		ImGui::End();
+
+#ifdef FEATURE_WITH_MENU
+		ct::feature::execute();
+#endif
 	}
 
 	static LRESULT CALLBACK hkWindowProc(
