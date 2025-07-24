@@ -21,9 +21,11 @@ static void MainThread(void* handle) {
 	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)FreeLibrary, handle, 0, 0);
 }
 
-BOOL APIENTRY DllMain(HMODULE hModule,
+BOOL APIENTRY DllMain(
+	HMODULE hModule,
 	DWORD reason,
-	LPVOID reserved) {
+	LPVOID reserved
+) {
 	if (reason == DLL_PROCESS_ATTACH) {
 
 		DisableThreadLibraryCalls(hModule);
