@@ -37,7 +37,7 @@ namespace ct::menu {
 				return 1L;
 		}
 
-		return ::CallWindowProcA(oProcess, hwnd, uMsg, wParam, lParam);
+		return CallWindowProcA(oProcess, hwnd, uMsg, wParam, lParam);
 	}
 
 	
@@ -46,7 +46,7 @@ namespace ct::menu {
 			window = reinterpret_cast<HWND>(hwnd);
 
 			oProcess = reinterpret_cast<WNDPROC>(
-				::SetWindowLongPtr(
+				SetWindowLongPtr(
 					window,
 					GWLP_WNDPROC, 
 					reinterpret_cast<uintptr_t>(hkWindowProc))
@@ -61,4 +61,14 @@ namespace ct::menu {
 		}
 	}
 
+	
+	std::pair<int, int> size() {
+		if (!window) return std::make_pair<int, int>(0,0);
+		
+		RECT rect;
+
+		GetClientRect(window, &rect);
+
+		return std::make_pair<int, int>(rect.right - rect.left, rect.bottom - rect.top);
+	}
 }

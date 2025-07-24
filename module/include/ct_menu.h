@@ -1,5 +1,7 @@
 #pragma once
 
+#include <tuple>
+
 namespace ct::menu {
 	void render();
 
@@ -10,4 +12,6 @@ namespace ct::menu {
 	void watch(void* hwnd);
 
 	void unwatch();
+
+	std::pair<int, int> size();
 }
