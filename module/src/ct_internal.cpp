@@ -4,5 +4,5 @@
 #include "lib_xorstr.h"
 
 namespace ct::internal {
-    // ExampleFn exampleFn = lib::pe::getExport<ExampleFn>(CT_HASH(XORSTR("example.dll")), "ExampleFunction");
+    // ExampleFn exampleFn = cl::pe::getExport<ExampleFn>(CT_HASH(XORSTR("example.dll")), "ExampleFunction");
 }
