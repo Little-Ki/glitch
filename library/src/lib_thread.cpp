@@ -18,7 +18,7 @@ namespace cl::thread {
 
 		if (!enter) return nullptr;
 
-		auto dst = reinterpret_cast<uintptr_t*>(& jmp[6]);
+		auto dst = reinterpret_cast<uintptr_t*>(&jmp[6]);
 
 		*dst = reinterpret_cast<uintptr_t>(function);
 

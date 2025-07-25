@@ -66,8 +66,8 @@ namespace cl::vmt {
 	};
 
 	template<typename T = uintptr_t>
-	__forceinline T method(uintptr_t base, size_t index) {
-		auto table = *reinterpret_cast<uintptr_t ***>(base);
+	__forceinline T method(void* base, size_t index) {
+		auto table = *reinterpret_cast<void ***>(base);
 		return reinterpret_cast<T>(table[index]);
 	}
 
