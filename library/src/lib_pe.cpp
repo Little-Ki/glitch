@@ -21,11 +21,11 @@ static __forceinline PEB* GetPEB() {
 
 namespace cl::pe {
 
-	Module getModule(const hash_t& name) {
+	bool getModule(const hash_t& mod_name, void** base, size_t* size) {
 		auto peb = GetPEB();
 
 		if (!peb) {
-			return { 0 };
+			return false;
 		}
 
 		auto ldrd = peb->LoaderData;
@@ -42,40 +42,46 @@ namespace cl::pe {
 			if (!entry)
 				continue;
 
-			if (hash::fnv1a(entry->BaseDllName.szBuffer) == name) {
-				return {
-					reinterpret_cast<uintptr_t>(entry->DllBase),
-					entry->SizeOfImage
-				};
+			if (hash::fnv1a(entry->BaseDllName.szBuffer) == mod_name) {
+				if (base) *base = entry->DllBase;
+				if (size) *size = entry->SizeOfImage;
+
+				return true;
 			}
 		}
 
-		return { 0 };
+		return false;
 	}
 
-	void* getExport(const Module& mod, const hash_t& proc)
+	void* getExport(const hash_t& name, const hash_t& proc)
 	{
-		auto dos = reinterpret_cast<PIMAGE_DOS_HEADER>(mod.base);
-		auto nt = reinterpret_cast<PIMAGE_NT_HEADERS>(mod.base + dos->e_lfanew);
-		auto export_entry = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
+		uint8_t* base = nullptr;
+
+		if (!getModule(name, reinterpret_cast<void**>(&base))) {
+			return nullptr;
+		}
+
+		const auto dos = reinterpret_cast<PIMAGE_DOS_HEADER>(base);
+		const auto nt = reinterpret_cast<PIMAGE_NT_HEADERS>(base + dos->e_lfanew);
+		const auto export_entry = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
 
 		if (!export_entry.Size) return nullptr;
 
-		auto export_dir = reinterpret_cast<PIMAGE_EXPORT_DIRECTORY>(mod.base + export_entry.VirtualAddress);
+		auto export_dir = reinterpret_cast<PIMAGE_EXPORT_DIRECTORY>(base + export_entry.VirtualAddress);
 
-		auto* addr_table = reinterpret_cast<uintptr_t*>(mod.base + export_dir->AddressOfFunctions);
-		auto* name_table = reinterpret_cast<uint32_t*>(mod.base + export_dir->AddressOfNames);
-		auto* index_table = reinterpret_cast<uint16_t*>(mod.base + export_dir->AddressOfNameOrdinals);
+		auto* addr_table = reinterpret_cast<uintptr_t*>(base + export_dir->AddressOfFunctions);
+		auto* name_table = reinterpret_cast<uint32_t*>(base + export_dir->AddressOfNames);
+		auto* index_table = reinterpret_cast<uint16_t*>(base + export_dir->AddressOfNameOrdinals);
 
 		for (uint16_t i = 0; i < export_dir->NumberOfNames; i++) {
-			const auto name = reinterpret_cast<char*>(mod.base + name_table[i]);
+			const auto name = reinterpret_cast<char*>(base + name_table[i]);
 			const auto index = index_table[i];
 
 			if (hash::fnv1a(name) != proc) {
 				continue;
 			}
 
-			return reinterpret_cast<void*>( mod.base + addr_table[index]);
+			return reinterpret_cast<void*>(base + addr_table[index]);
 		}
 
 		return nullptr;
@@ -92,8 +98,9 @@ namespace cl::pe {
 		return cl::memory::write(handle, &o_dos, sizeof(IMAGE_DOS_HEADER));
 	}
 
-	void* findCave(void* handle, size_t size) {
-		auto base = reinterpret_cast<uint8_t*>(handle);
+	void* findCave(const hash_t& name, size_t size) {
+
+		uint8_t* base = nullptr;
 
 		auto check = [](void* base, size_t size) {
 			const auto p = reinterpret_cast<uint8_t*>(base);
@@ -108,17 +115,15 @@ namespace cl::pe {
 			return true;
 			};
 
+		if (!getModule(name, reinterpret_cast<void**>(&base))) {
+			return nullptr;
+		}
+
 		if (size == 0) return nullptr;
 
-		if (!cl::memory::isValid(handle)) return nullptr;
-
-		auto dos = reinterpret_cast<PIMAGE_DOS_HEADER>(base);
-
-		if (dos->e_magic != 'MZ') return 0;
-
-		auto nt = reinterpret_cast<PIMAGE_NT_HEADERS>(base + dos->e_lfanew);
-
-		auto sections = reinterpret_cast<PIMAGE_SECTION_HEADER>(base + dos->e_lfanew + sizeof(IMAGE_NT_HEADERS));
+		const auto dos = reinterpret_cast<PIMAGE_DOS_HEADER>(base);
+		const auto nt = reinterpret_cast<PIMAGE_NT_HEADERS>(base + dos->e_lfanew);
+		const auto sections = reinterpret_cast<PIMAGE_SECTION_HEADER>(base + dos->e_lfanew + sizeof(IMAGE_NT_HEADERS));
 
 		for (auto i = 0; i < nt->FileHeader.NumberOfSections; i++) {
 			auto& section = sections[i];
@@ -134,7 +139,6 @@ namespace cl::pe {
 					return p;
 				}
 			}
-
 		}
 
 		return nullptr;

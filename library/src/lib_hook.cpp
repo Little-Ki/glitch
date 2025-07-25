@@ -27,22 +27,6 @@ namespace cl::hook {
 	};
 
 	static std::unordered_map<void*, HookRecord> records;
-	TrampSize measureSize(void* entry)
-	{
-		TrampSize result{ 0 };
-		auto bytes = reinterpret_cast<uint8_t*>(entry);
-
-		result.jump_size = IsWin64 ? 19 : 10;
-
-		while (result.stub_size < 5) {
-			const auto len = cl::dasm::asmlen(&bytes[result.stub_size], IsWin64);
-			result.stub_size += len;
-		}
-
-		result.total_size = result.stub_size + result.jump_size;
-
-		return result;
-	}
 
 	uint8_t* defaultAlloc(void* entry, size_t require)
 	{
@@ -75,11 +59,20 @@ namespace cl::hook {
 		uint8_t* entry = reinterpret_cast<uint8_t*>(_entry);
 		uint8_t* tramp = nullptr;
 
-		auto measure = measureSize(entry);
-		auto stub_size = measure.stub_size;
-		auto total_size = measure.total_size;
+		auto stub_size = 0;
 
-		tramp = allocator(entry, total_size);
+		while (stub_size < 5) {
+			const auto len = cl::dasm::asmlen(&entry[stub_size], IsWin64);
+			stub_size += len;
+		}
+
+		auto require_size = stub_size + IsWin64 ? 19 : 10;
+
+		if (!allocator) {
+			allocator = defaultAlloc;
+		}
+
+		tramp = allocator(entry, require_size);
 
 		if (!tramp) {
 			return false;
@@ -87,7 +80,7 @@ namespace cl::hook {
 
 		record.src = entry;
 		record.tramp = tramp;
-		record.stub_size = measure.stub_size;
+		record.stub_size = stub_size;
 
 		memcpy_s(tramp, stub_size, entry, stub_size);
 
