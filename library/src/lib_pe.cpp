@@ -53,13 +53,13 @@ namespace cl::pe {
 		return { 0 };
 	}
 
-	uintptr_t getExport(const Module& mod, const hash_t& proc)
+	void* getExport(const Module& mod, const hash_t& proc)
 	{
 		auto dos = reinterpret_cast<PIMAGE_DOS_HEADER>(mod.base);
 		auto nt = reinterpret_cast<PIMAGE_NT_HEADERS>(mod.base + dos->e_lfanew);
 		auto export_entry = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
 
-		if (!export_entry.Size) return 0;
+		if (!export_entry.Size) return nullptr;
 
 		auto export_dir = reinterpret_cast<PIMAGE_EXPORT_DIRECTORY>(mod.base + export_entry.VirtualAddress);
 
@@ -75,10 +75,10 @@ namespace cl::pe {
 				continue;
 			}
 
-			return mod.base + addr_table[index];
+			return reinterpret_cast<void*>( mod.base + addr_table[index]);
 		}
 
-		return 0;
+		return nullptr;
 	}
 
 	bool headless(void* handle)
@@ -92,7 +92,7 @@ namespace cl::pe {
 		return cl::memory::write(handle, &o_dos, sizeof(IMAGE_DOS_HEADER));
 	}
 
-	uintptr_t findCave(void* handle, size_t size) {
+	void* findCave(void* handle, size_t size) {
 		auto base = reinterpret_cast<uint8_t*>(handle);
 
 		auto check = [](void* base, size_t size) {
@@ -108,9 +108,9 @@ namespace cl::pe {
 			return true;
 			};
 
-		if (size == 0) return 0;
+		if (size == 0) return nullptr;
 
-		if (!cl::memory::isValid(handle)) return 0;
+		if (!cl::memory::isValid(handle)) return nullptr;
 
 		auto dos = reinterpret_cast<PIMAGE_DOS_HEADER>(base);
 
@@ -131,12 +131,12 @@ namespace cl::pe {
 				const auto p = base + section.VirtualAddress + j - size;
 
 				if (check(p, size)) {
-					return reinterpret_cast<uintptr_t>(p);
+					return p;
 				}
 			}
 
 		}
 
-		return 0;
+		return nullptr;
 	}
 }

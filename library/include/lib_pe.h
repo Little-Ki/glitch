@@ -10,7 +10,7 @@ namespace cl::pe {
 
     Module getModule(const hash_t& name);
 
-    uintptr_t getExport(const Module& mod, const hash_t& proc);
+    void* getExport(const Module& mod, const hash_t& proc);
 
     template<typename T>
     T getExport(const Module& mod, const hash_t& proc) {
@@ -19,5 +19,5 @@ namespace cl::pe {
 
     bool headless(void* handle);
 
-    uintptr_t findCave(void* handle, size_t size);
+    void* findCave(void* handle, size_t size);
 }
