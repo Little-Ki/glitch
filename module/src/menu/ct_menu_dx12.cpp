@@ -263,8 +263,8 @@ namespace ct::menu {
         RELEASE(cmd_allocator);
         RELEASE(cmd_list);
         RELEASE(swapchain);
-        return cl::hook::create(vmt0[8], hkPresent, (void **)(&oPresent)) &&
-               cl::hook::create(vmt1[10], hkExecuteCommandList, (void **)(&oExecCmdList));
+        return cl::hook::trampoline(vmt0[8], hkPresent, (void **)(&oPresent)) &&
+               cl::hook::trampoline(vmt1[10], hkExecuteCommandList, (void **)(&oExecCmdList));
 
     fail:
         RELEASE(device);

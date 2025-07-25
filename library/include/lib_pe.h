@@ -18,4 +18,6 @@ namespace cl::pe {
     };
 
     bool headless(void* handle);
+
+    uintptr_t findCave(void* handle, size_t size);
 }

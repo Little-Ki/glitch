@@ -5,13 +5,13 @@
 
 namespace cl::memory {
 
-    bool isValid(uintptr_t address) {
+    bool isValid(void* address) {
 		if (!address)
 			return false;
 
 		MEMORY_BASIC_INFORMATION mbi;
 
-		if (!VirtualQuery(reinterpret_cast<const void*>(address), &mbi, sizeof mbi))
+		if (!VirtualQuery(address, &mbi, sizeof mbi))
 			return false;
 
 		if (mbi.Protect & PAGE_EXECUTE_READWRITE ||

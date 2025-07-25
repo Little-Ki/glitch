@@ -8,8 +8,9 @@ namespace cl::vmt {
 
 	__forceinline static size_t methodCount(uintptr_t* vmt) {
 		size_t i = 0;
-		while (cl::memory::isValid(vmt[i]))
-			++i;
+		while (cl::memory::isValid(
+			reinterpret_cast<void*>(vmt[i])
+		)) i += 1;
 		return i;
 	}
 
@@ -21,7 +22,7 @@ namespace cl::vmt {
 	{
 		_state.base = reinterpret_cast<ClassRef*>(base);
 		_state.installed = false;
-		
+
 		if (_state.base) {
 			_state.original = _state.base->vmt;
 		}
@@ -96,7 +97,7 @@ namespace cl::vmt {
 	bool VMT::hook(void* function, void* detour) {
 		std::shared_lock<std::shared_mutex> lock(_state.mutex);
 
-		if (!_state.installed) 
+		if (!_state.installed)
 			return false;
 
 		const size_t index = std::find(
@@ -105,7 +106,7 @@ namespace cl::vmt {
 			reinterpret_cast<uintptr_t>(function)
 		) - _state.table.begin();
 
-		if (index >= _state.count) 
+		if (index >= _state.count)
 			return false;
 
 		_state.table[index] = reinterpret_cast<uintptr_t>(detour);

@@ -1,11 +1,21 @@
 #pragma once
 
-#include <cctype>
+#include <cstdint>
+#include <functional>
 
 namespace cl::hook {
 
-    bool create(void *function, void *detour, void **proxy);
+	struct TrampSize {
+		size_t total_size;
+		size_t stub_size;
+		size_t jump_size;
+	};
 
-    void releaseAll();
+	uint8_t* defaultAlloc(void* entry, size_t require);
 
+	bool trampoline(void* entry, void* detour, void** tramp, std::function<uint8_t*(void*, size_t)> allocator = defaultAlloc);
+
+	TrampSize measureSize(void* entry);
+
+	void releaseAll();
 }

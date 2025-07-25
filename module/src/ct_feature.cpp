@@ -1,4 +1,4 @@
-#include "ct_features.h"
+#include "ct_feature.h"
 
 namespace ct::feature {
     void install() {

@@ -2,7 +2,7 @@
 #include <cstdint>
 
 namespace cl::memory {
-    bool isValid(uintptr_t address);
+    bool isValid(void* address);
 
     bool write(void *dst, void *src, size_t size);
 }

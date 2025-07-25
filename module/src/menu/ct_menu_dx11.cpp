@@ -124,7 +124,7 @@ namespace ct::menu {
         RELEASE(swapchain);
         RELEASE(device);
 
-        return cl::hook::create(vmt[8], hkPresent, (void **)(&oPresent));
+        return cl::hook::trampoline(vmt[8], hkPresent, (void **)(&oPresent));
     }
 
     void uninstall() {

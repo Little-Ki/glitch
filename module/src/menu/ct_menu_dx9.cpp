@@ -114,8 +114,8 @@ namespace ct::menu {
         RELEASE(device);
         RELEASE(dx9);
 
-        return cl::hook::create(vmt[16], hkReset, (void **)(&oReset)) &&
-               cl::hook::create(vmt[42], hkEndScene, (void **)(&oEndScene));
+        return cl::hook::trampoline(vmt[16], hkReset, (void **)(&oReset)) &&
+               cl::hook::trampoline(vmt[42], hkEndScene, (void **)(&oEndScene));
     }
 
     void uninstall() {
