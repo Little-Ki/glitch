@@ -6,6 +6,8 @@
 
 using namespace cl::hash;
 
+#define ALIGN(x, a) ((x + a - 1) & ~(a - 1));
+
 static __forceinline TEB* GetTEB() {
 #ifdef _WIN64
 	return reinterpret_cast<TEB*>(__readgsqword(0x30));
@@ -21,28 +23,27 @@ static __forceinline PEB* GetPEB() {
 
 namespace cl::pe {
 
-	bool getModule(const hash_t& mod_name, void** base, size_t* size) {
+	bool getModule(const hash_t& name, void** base, size_t* size) {
 		auto peb = GetPEB();
 
 		if (!peb) {
 			return false;
 		}
 
-		auto ldrd = peb->LoaderData;
-		auto mods = &ldrd->InMemoryOrderModuleList;
-		auto node = mods->Flink;
+		auto ldr = peb->LoaderData;
+		auto list = &ldr->InMemoryOrderModuleList;
 
-		while (node != mods) {
+		for (auto it = list->Flink; it != list; it = it->Flink) {
 			auto entry = reinterpret_cast<LDR_DATA_TABLE_ENTRY*>
 				CONTAINING_RECORD(
-					node,
+					it,
 					LDR_DATA_TABLE_ENTRY,
 					InMemoryOrderLinks);
 
 			if (!entry)
 				continue;
 
-			if (hash::fnv1a(entry->BaseDllName.szBuffer) == mod_name) {
+			if (hash::fnv1a(entry->BaseDllName.szBuffer) == name) {
 				if (base) *base = entry->DllBase;
 				if (size) *size = entry->SizeOfImage;
 
@@ -98,28 +99,34 @@ namespace cl::pe {
 		return cl::memory::write(handle, &o_dos, sizeof(IMAGE_DOS_HEADER));
 	}
 
+	static bool isCave(void* base, size_t size) {
+		auto beg = reinterpret_cast<uint8_t*>(base);
+		auto end = reinterpret_cast<uint8_t*>(base) + size - 1;
+
+		if (*beg != *end)
+			return false;
+
+		auto wild = *beg;
+
+		while (beg <= end) {
+			if (*beg != wild || *end != wild)
+				return false;
+			beg += 1;
+			end -= 1;
+		}
+
+		return true;
+	}
+
 	void* findCave(const hash_t& name, size_t size) {
 
 		uint8_t* base = nullptr;
-
-		auto check = [](void* base, size_t size) {
-			const auto p = reinterpret_cast<uint8_t*>(base);
-
-			for (auto i = 0; i < (size + 1) / 2; i++) {
-				if (!cl::memory::isValid(p + i)) return false;
-				if (!cl::memory::isValid(p + size - 1 - i)) return false;
-				if (p[i] != 0x90) return false;
-				if (p[size - 1 - i]) return false;
-			}
-
-			return true;
-			};
 
 		if (!getModule(name, reinterpret_cast<void**>(&base))) {
 			return nullptr;
 		}
 
-		if (size == 0) return nullptr;
+		if (size < 5) return nullptr;
 
 		const auto dos = reinterpret_cast<PIMAGE_DOS_HEADER>(base);
 		const auto nt = reinterpret_cast<PIMAGE_NT_HEADERS>(base + dos->e_lfanew);
@@ -131,16 +138,16 @@ namespace cl::pe {
 			if (!(section.Characteristics & IMAGE_SCN_CNT_CODE)) continue;
 
 			auto raw = reinterpret_cast<uint8_t*>(base + section.VirtualAddress);
+			auto align_size = ALIGN(section.SizeOfRawData, 0x1000);
 
-			for (auto j = 0; j < section.SizeOfRawData - size; j++) {
-				const auto p = base + section.VirtualAddress + j - size;
-
-				if (check(p, size)) {
-					return p;
+			for (auto j = 0; j < align_size - size; j++) {
+				if (isCave(&raw[j], size)) {
+					return &raw[j];
 				}
 			}
 		}
 
 		return nullptr;
 	}
+
 }

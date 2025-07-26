@@ -28,24 +28,21 @@ namespace cl::hook {
 
 	static std::unordered_map<void*, HookRecord> records;
 
-	uint8_t* defaultAlloc(void* entry, size_t require)
+	static uint8_t* defaultAlloc(void* entry, size_t require)
 	{
 		uint8_t* result = nullptr;
+		uint8_t* ptr = reinterpret_cast<uint8_t*>(entry) - 0x2000;
 
-		{
-			uint8_t* ptr = reinterpret_cast<uint8_t*>(entry) - 0x2000;
-
-			while (!result) {
-				result = reinterpret_cast<uint8_t*>(
-					VirtualAlloc(ptr, require, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
-				ptr = ptr + 0x200;
-			}
+		while (!result) {
+			result = reinterpret_cast<uint8_t*>(
+				VirtualAlloc(ptr, require, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+			ptr += 0x200;
 		}
 
 		return result;
 	}
 
-	bool trampoline(void* _entry, void* detour, void** _tramp, std::function<uint8_t* (void*, size_t)> allocator)
+	bool trampoline(void* _entry, void* detour, void** _tramp, std::function<uint8_t* (void*, size_t)> alloc)
 	{
 		std::shared_lock<std::shared_mutex> lock(mutex);
 
@@ -53,8 +50,6 @@ namespace cl::hook {
 			*_tramp = records[_entry].tramp;
 			return true;
 		}
-
-		HookRecord record{ 0 };
 
 		uint8_t* entry = reinterpret_cast<uint8_t*>(_entry);
 		uint8_t* tramp = nullptr;
@@ -66,23 +61,14 @@ namespace cl::hook {
 			stub_size += len;
 		}
 
-		auto require_size = stub_size + IsWin64 ? 19 : 10;
+		auto require_size = stub_size + (IsWin64 ? 19 : 10);
 
-		if (!allocator) {
-			allocator = defaultAlloc;
-		}
+		tramp = alloc ? alloc(entry, require_size) : defaultAlloc(entry, require_size);
 
-		tramp = allocator(entry, require_size);
+		if (!tramp) return false;
 
-		if (!tramp) {
+		if (!cl::memory::write(tramp, entry, stub_size))
 			return false;
-		}
-
-		record.src = entry;
-		record.tramp = tramp;
-		record.stub_size = stub_size;
-
-		memcpy_s(tramp, stub_size, entry, stub_size);
 
 		uint8_t* jmps = tramp + stub_size;
 
@@ -91,7 +77,7 @@ namespace cl::hook {
 			uint8_t jmp[] = {
 				0xE9, 0x00, 0x00, 0x00, 0x00,
 				0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 // address of detour function
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 			};
 
 			int* rel = reinterpret_cast<int*>(&jmp[1]);
@@ -132,6 +118,12 @@ namespace cl::hook {
 			if (!cl::memory::write(entry, jmp, stub_size))
 				return false;
 		}
+
+		HookRecord record{ 0 };
+
+		record.src = entry;
+		record.tramp = tramp;
+		record.stub_size = stub_size;
 
 		records[_entry] = record;
 

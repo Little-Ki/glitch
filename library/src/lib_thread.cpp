@@ -1,11 +1,18 @@
 #include "lib_thread.h"
+#include "lib_memory.h"
 
 #include <cstdint>
 #include <memory>
 
 namespace cl::thread {
 
-	HANDLE create(void* function, void* param) {
+	static uint8_t* defaultAlloc(size_t size) {
+		return reinterpret_cast<uint8_t*>(
+			VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE)
+		);
+	}
+
+	HANDLE create(void* function, void* param, std::function<uint8_t* (size_t)> alloc) {
 
 		void* enter = nullptr;
 
@@ -14,7 +21,8 @@ namespace cl::thread {
 			0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 		};
-		enter = VirtualAlloc(nullptr, 32, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+
+		enter = alloc ? alloc(14) : defaultAlloc(14);
 
 		if (!enter) return nullptr;
 
@@ -22,13 +30,12 @@ namespace cl::thread {
 
 		*dst = reinterpret_cast<uintptr_t>(function);
 
-		std::memcpy(enter, jmp, sizeof(jmp));
 #else
-
 		uint8_t jmp[] = {
 			0xE9, 0x00, 0x00, 0x00, 0x00,
 		};
-		enter = VirtualAlloc(nullptr, 32, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+
+		enter = alloc ? alloc(5) : defaultAlloc(5);
 
 		if (!enter) return nullptr;
 
@@ -38,9 +45,10 @@ namespace cl::thread {
 			reinterpret_cast<uint8_t*>(function) -
 			reinterpret_cast<uint8_t*>(enter) - 5
 			);
-
-		std::memcpy(enter, jmp, sizeof(jmp));
 #endif
+
+		if (!cl::memory::write(enter, jmp, sizeof(jmp)))
+			return nullptr;
 
 		return CreateThread(0, 0, (LPTHREAD_START_ROUTINE)enter, param, 0, 0);
 	}

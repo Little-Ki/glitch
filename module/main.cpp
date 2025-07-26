@@ -4,11 +4,12 @@
 #include "lib_console.h"
 #include "lib_print.h"
 #include "lib_pe.h"
+#include "lib_thread.h"
 #include "ct_menu.h"
 #include "ct_bypass.h"
 #include "ct_feature.h"
 
-static void MainThread(void* handle) {
+static void mainThread(void* handle) {
 	ct::menu::install();
 	ct::bypass::install();
 	ct::feature::install();
@@ -24,19 +25,14 @@ static void MainThread(void* handle) {
 }
 
 BOOL APIENTRY DllMain(
-	HMODULE hModule,
+	HMODULE handle,
 	DWORD reason,
 	LPVOID reserved
 ) {
 	if (reason == DLL_PROCESS_ATTACH) {
 
-		DisableThreadLibraryCalls(hModule);
-		CreateThread(
-			nullptr, 0,
-			reinterpret_cast<LPTHREAD_START_ROUTINE>(MainThread),
-			hModule,
-			0, nullptr
-		);
+		DisableThreadLibraryCalls(handle);
+		cl::thread::create(mainThread, handle);
 	}
 
 	return TRUE;
