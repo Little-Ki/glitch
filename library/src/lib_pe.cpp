@@ -43,7 +43,11 @@ namespace cl::pe {
 			if (!entry)
 				continue;
 
-			if (hash::fnv1a(entry->BaseDllName.szBuffer) == name) {
+			std::wstring lower(entry->BaseDllName.szBuffer);
+
+			std::transform(lower.begin(), lower.end(), lower.begin(), std::tolower);
+
+			if (hash::fnv1a(lower.c_str()) == name) {
 				if (base) *base = entry->DllBase;
 				if (size) *size = entry->SizeOfImage;
 
@@ -70,19 +74,19 @@ namespace cl::pe {
 
 		auto export_dir = reinterpret_cast<PIMAGE_EXPORT_DIRECTORY>(base + export_entry.VirtualAddress);
 
-		auto* addr_table = reinterpret_cast<uintptr_t*>(base + export_dir->AddressOfFunctions);
-		auto* name_table = reinterpret_cast<uint32_t*>(base + export_dir->AddressOfNames);
-		auto* index_table = reinterpret_cast<uint16_t*>(base + export_dir->AddressOfNameOrdinals);
+		auto addr_table = reinterpret_cast<uint32_t*>(base + export_dir->AddressOfFunctions);
+		auto name_table = reinterpret_cast<uint32_t*>(base + export_dir->AddressOfNames);
+		auto index_table = reinterpret_cast<uint16_t*>(base + export_dir->AddressOfNameOrdinals);
+
 
 		for (uint16_t i = 0; i < export_dir->NumberOfNames; i++) {
 			const auto name = reinterpret_cast<char*>(base + name_table[i]);
-			const auto index = index_table[i];
 
 			if (hash::fnv1a(name) != proc) {
 				continue;
 			}
 
-			return reinterpret_cast<void*>(base + addr_table[index]);
+			return reinterpret_cast<void*>(base + addr_table[index_table[i]]);
 		}
 
 		return nullptr;

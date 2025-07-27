@@ -1,6 +1,7 @@
 ﻿// dllmain.cpp : 定义 DLL 应用程序的入口点。
 #include <Windows.h>
 #include "lib_hook.h"
+#include "lib_hash.h"
 #include "lib_console.h"
 #include "lib_print.h"
 #include "lib_pe.h"

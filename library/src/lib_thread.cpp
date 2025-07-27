@@ -1,5 +1,7 @@
 #include "lib_thread.h"
 #include "lib_memory.h"
+#include "lib_pe.h"
+#include "lib_hash.h"
 
 #include <cstdint>
 #include <memory>
