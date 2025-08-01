@@ -20,7 +20,7 @@ namespace cl::crc32 {
     }
 
     template <typename T, typename = typename std::enable_if_t<std::is_integral_v<T>>>
-    uint32_t hash(const T *data, uint32_t len, uint32_t crc = 0) {
+    uint32_t hash(const T *data, size_t len, uint32_t crc = 0) {
         const static auto table = crcTable<0xEDB88320>();
 
         const auto raw_data = reinterpret_cast<uint8_t*>(data);
@@ -34,5 +34,5 @@ namespace cl::crc32 {
     }
 
     #define CT_CRC32(STR) std::integral_constant<uint32_t, ::hash(STR, sizeof(STR))>::value
-    
+
 }
