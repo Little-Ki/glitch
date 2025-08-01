@@ -5,7 +5,7 @@
 
 namespace cl::memory {
 
-    bool isValid(void* address) {
+    bool isValid(const void* address) {
 		if (!address)
 			return false;
 

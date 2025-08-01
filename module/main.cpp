@@ -25,7 +25,7 @@ static void mainThread(void* handle) {
 	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)FreeLibrary, handle, 0, 0);
 }
 
-BOOL APIENTRY DllMain(
+static BOOL APIENTRY DllMain(
 	HMODULE handle,
 	DWORD reason,
 	LPVOID reserved

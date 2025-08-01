@@ -9,5 +9,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/libs)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SOURCE)
 
+source_group("source" FILES ${SOURCE})
+
 add_library(${PROJECT_NAME} STATIC ${SOURCE})
 

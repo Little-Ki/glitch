@@ -37,8 +37,10 @@ elseif(${MODULE_BACKEND} STREQUAL "D3D9")
     list(APPEND SOURCE_MENU ${PROJECT_SOURCE_DIR}/src/menu/ct_menu_dx9.cpp)
 endif()
 
-source_group("Source Files\\sdk" FILES ${SOURCE_SDK})
-source_group("Source Files\\menu" FILES ${SOURCE_MENU})
+source_group("source" FILES ${SOURCE})
+source_group("source" FILES ${PROJECT_SOURCE_DIR}/main.cpp)
+source_group("source\\sdk" FILES ${SOURCE_SDK})
+source_group("source\\menu" FILES ${SOURCE_MENU})
 
 add_library(${PROJECT_NAME} SHARED main.cpp ${SOURCE} ${SOURCE_MENU} ${SOURCE_SDK}) 
 

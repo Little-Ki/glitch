@@ -15,7 +15,7 @@ namespace cl::vmt {
 		};
 
 		struct VmtState {
-			ClassRef* base;
+			ClassRef* base{ nullptr };
 
 			size_t count{ 0 };
 
