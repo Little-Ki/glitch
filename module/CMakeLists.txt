@@ -20,6 +20,7 @@ include_directories(
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SOURCE)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/sdk SOURCE_SDK)
 
+list(REMOVE_ITEM SOURCE ${PROJECT_SOURCE_DIR}/src/ct_menu.cpp)
 list(APPEND SOURCE_MENU ${PROJECT_SOURCE_DIR}/../third_party/imgui/source/backends/imgui_impl_win32.cpp)
 list(APPEND SOURCE_MENU ${PROJECT_SOURCE_DIR}/src/ct_menu.cpp)
 

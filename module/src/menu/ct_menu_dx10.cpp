@@ -84,7 +84,7 @@ namespace ct::menu {
             }
         }
 
-        return tPresent(self, sync_interval, flags);
+        return oPresent(self, sync_interval, flags);
     }
 
     bool install() {

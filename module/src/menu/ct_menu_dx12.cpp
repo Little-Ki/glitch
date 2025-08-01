@@ -85,7 +85,7 @@ namespace ct::menu {
                     env.frames.resize(desc.BufferCount);
 
                     if (device->CreateDescriptorHeap(&hd, IID_PPV_ARGS(&env.desc_imgui_render)) != S_OK)
-                        return tPresent(sc, interval, flags);
+                        return oPresent(sc, interval, flags);
                 }
 
                 {
@@ -95,12 +95,12 @@ namespace ct::menu {
                     hd.NodeMask = 1;
 
                     if (device->CreateDescriptorHeap(&hd, IID_PPV_ARGS(&env.desc_back_buffer)) != S_OK)
-                        return tPresent(sc, interval, flags);
+                        return oPresent(sc, interval, flags);
                 }
 
                 ID3D12CommandAllocator *cmd_allocator;
                 if (device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&cmd_allocator)) != S_OK)
-                    return tPresent(sc, interval, flags);
+                    return oPresent(sc, interval, flags);
 
                 for (size_t i = 0; i < desc.BufferCount; i++) {
                     env.frames[i].command_allocator = cmd_allocator;
@@ -108,7 +108,7 @@ namespace ct::menu {
 
                 if (device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmd_allocator, NULL, IID_PPV_ARGS(&env.command_list)) != S_OK ||
                     env.command_list->Close() != S_OK)
-                    return tPresent(sc, interval, flags);
+                    return oPresent(sc, interval, flags);
 
                 const auto rtv_desc_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
                 D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = env.desc_back_buffer->GetCPUDescriptorHandleForHeapStart();

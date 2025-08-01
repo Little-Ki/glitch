@@ -76,7 +76,7 @@ namespace ct::menu {
     }
 
     bool install() {
-        D3DPRESENT_PARAMETERS params;
+        D3DPRESENT_PARAMETERS params; 
         LPDIRECT3D9 dx9;
         LPDIRECT3DDEVICE9 device = nullptr;
 
