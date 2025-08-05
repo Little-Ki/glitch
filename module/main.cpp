@@ -20,7 +20,7 @@ static void mainThread(void* handle) {
 
 	ct::menu::uninstall();
 	ct::bypass::uninstall();
-	cl::hook::releaseAll();
+	cl::hook::detach();
 
 	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)FreeLibrary, handle, 0, 0);
 }
