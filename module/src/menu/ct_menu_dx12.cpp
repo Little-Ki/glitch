@@ -23,12 +23,6 @@
 
 namespace ct::menu {
 
-    using PresentFn = HRESULT(__stdcall *)(IDXGISwapChain3 *, UINT, UINT);
-    using ExecuteCommandListFn = void(__stdcall *)(ID3D12CommandQueue *, UINT, ID3D12CommandList **);
-
-    static PresentFn oPresent = nullptr;
-    static ExecuteCommandListFn oExecCmdList = nullptr;
-
     struct D3D12Environment {
 
         struct FrameContext {
@@ -56,7 +50,7 @@ namespace ct::menu {
             env.command_queue = sc;
         }
 
-        oExecCmdList(sc, count, list);
+		return cl::hook::invoke(hkExecuteCommandList, sc, count, list);
     }
 
     static HRESULT __stdcall hkPresent(IDXGISwapChain3 *sc, UINT interval, UINT flags) {
@@ -189,7 +183,8 @@ namespace ct::menu {
             }
         }
 
-        return oPresent(sc, interval, flags);
+        
+		return cl::hook::invoke(hkPresent, sc, interval, flags);
     }
 
     bool install() {
@@ -263,8 +258,11 @@ namespace ct::menu {
         RELEASE(cmd_allocator);
         RELEASE(cmd_list);
         RELEASE(swapchain);
-        return cl::hook::trampoline(vmt0[8], hkPresent, (void **)(&oPresent)) &&
-               cl::hook::trampoline(vmt1[10], hkExecuteCommandList, (void **)(&oExecCmdList));
+
+        cl::hook::attach(vmt0[8], hkPresent);
+        cl::hook::attach(vmt1[10], hkExecuteCommandList);
+
+        return true;
 
     fail:
         RELEASE(device);
@@ -277,6 +275,8 @@ namespace ct::menu {
 
     void uninstall() {
         menu::unwatch();
+        cl::hook::detach(hkPresent);
+        cl::hook::detach(hkExecuteCommandList);
     }
 
 }

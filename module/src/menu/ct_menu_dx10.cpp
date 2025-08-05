@@ -22,10 +22,6 @@
 
 namespace ct::menu {
 
-    using PresentFn = HRESULT(__stdcall *)(IDXGISwapChain *, UINT, UINT);
-
-    static PresentFn oPresent = nullptr;
-
     static HRESULT __stdcall hkPresent(IDXGISwapChain *self, UINT sync_interval, UINT flags) {
 
         static bool init = false;
@@ -84,7 +80,7 @@ namespace ct::menu {
             }
         }
 
-        return oPresent(self, sync_interval, flags);
+		return cl::hook::invoke(hkPresent, self, sync_interval, flags);
     }
 
     bool install() {
@@ -120,11 +116,14 @@ namespace ct::menu {
         RELEASE(swapchain);
         RELEASE(device);
 
-        return cl::hook::trampoline(vmt[8], hkPresent, (void **)(&oPresent));
+        cl::hook::attach(vmt[8], hkPresent);
+
+        return true;
     }
 
     void uninstall() {
         menu::unwatch();
+        cl::hook::detach(hkPresent);
     }
 
 }

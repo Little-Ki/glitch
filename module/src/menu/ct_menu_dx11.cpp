@@ -128,6 +128,7 @@ namespace ct::menu {
 
 	void uninstall() {
 		menu::unwatch();
+		cl::hook::detach(hkPresent);
 	}
 
 }
