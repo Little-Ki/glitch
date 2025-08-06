@@ -16,7 +16,7 @@ static void mainThread(void* handle) {
 	ct::bypass::install(handle);
 	ct::menu::install();
 	ct::feature::install();
-	//cl::pe::headless(handle);
+	cl::pe::headless(handle);
 
 	while (!GetAsyncKeyState(VK_END));
 
