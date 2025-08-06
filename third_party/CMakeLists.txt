@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 3.5)
+
+project(third_party)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/libs)
+
+include_directories(${PROJECT_SOURCE_DIR}/xorstr/include)
+include_directories(${PROJECT_SOURCE_DIR}/imgui)
+include_directories(${PROJECT_SOURCE_DIR}/imgui/backends)
+aux_source_directory(${PROJECT_SOURCE_DIR}/imgui SOURCE)
+
+source_group("source" FILES ${SOURCE})
+
+add_library(${PROJECT_NAME} STATIC ${SOURCE})
+
