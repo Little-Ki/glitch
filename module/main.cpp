@@ -6,15 +6,17 @@
 #include "lib_print.h"
 #include "lib_pe.h"
 #include "lib_thread.h"
+#include "lib_internal.h"
+
 #include "ct_menu.h"
 #include "ct_bypass.h"
 #include "ct_feature.h"
 
 static void mainThread(void* handle) {
+	ct::bypass::install(handle);
 	ct::menu::install();
-	ct::bypass::install();
 	ct::feature::install();
-	cl::pe::headless(handle);
+	//cl::pe::headless(handle);
 
 	while (!GetAsyncKeyState(VK_END));
 
@@ -22,7 +24,7 @@ static void mainThread(void* handle) {
 	ct::bypass::uninstall();
 	cl::hook::detach();
 
-	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)FreeLibrary, handle, 0, 0);
+	cl::internal::CreateThread(0, 0, (LPTHREAD_START_ROUTINE)FreeLibrary, handle, 0, 0);
 }
 
 static BOOL APIENTRY DllMain(
@@ -32,7 +34,7 @@ static BOOL APIENTRY DllMain(
 ) {
 	if (reason == DLL_PROCESS_ATTACH) {
 
-		DisableThreadLibraryCalls(handle);
+		cl::internal::DisableThreadLibraryCalls(handle);
 		cl::thread::create(mainThread, handle);
 	}
 

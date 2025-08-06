@@ -1,6 +1,7 @@
 #include "lib_hook.h"
 #include "lib_dasm.h"
 #include "lib_memory.h"
+#include "lib_internal.h"
 
 #include <Windows.h>
 #include <iostream>
@@ -36,7 +37,9 @@ namespace cl::hook {
 
 		while (!result) {
 			result = reinterpret_cast<uint8_t*>(
-				VirtualAlloc(ptr, require, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+				internal::VirtualAlloc(
+					ptr, require, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE
+				));
 			ptr += 0x200;
 		}
 

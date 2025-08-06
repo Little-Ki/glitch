@@ -1,4 +1,5 @@
 #include "lib_memory.h"
+#include "lib_internal.h"
 
 #include <Windows.h>
 #include <memory>
@@ -11,7 +12,7 @@ namespace cl::memory {
 
 		MEMORY_BASIC_INFORMATION mbi;
 
-		if (!VirtualQuery(address, &mbi, sizeof mbi))
+		if (!internal::VirtualQuery(address, &mbi, sizeof mbi))
 			return false;
 
 		if (mbi.Protect & PAGE_EXECUTE_READWRITE ||
@@ -25,12 +26,12 @@ namespace cl::memory {
     bool write(void *dst, void *src, size_t size) {
         DWORD old;
 
-        if (!VirtualProtect(dst, size, PAGE_EXECUTE_READWRITE, &old))
+        if (!internal::VirtualProtect(dst, size, PAGE_EXECUTE_READWRITE, &old))
             return false;
 
         std::memcpy(dst, src, size);
 
-        VirtualProtect(dst, size, old, &old);
+		internal::VirtualProtect(dst, size, old, &old);
 
         return true;
     }

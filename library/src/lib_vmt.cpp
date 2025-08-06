@@ -1,9 +1,6 @@
 #include "lib_vmt.h"
 #include "lib_memory.h"
 
-#include <Windows.h>
-#include <unordered_map>
-
 namespace cl::vmt {
 
 	__forceinline static size_t methodCount(uintptr_t* vmt) {

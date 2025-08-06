@@ -1,9 +1,9 @@
 #include "lib_console.h"
-#include <Windows.h>
+#include "lib_internal.h"
 
 namespace cl::console {
     bool allocate(const std::string &title) {
-        if (!AllocConsole()) {
+        if (!internal::AllocConsole()) {
             return false;
         }
 
@@ -13,7 +13,7 @@ namespace cl::console {
             return false;
         }
 
-        if (!SetConsoleTitleA(title.c_str())) {
+        if (!internal::SetConsoleTitleA(title.c_str())) {
             return false;
         }
 
@@ -21,6 +21,6 @@ namespace cl::console {
     }
 
     void detach() {
-        FreeConsole();
+        internal::FreeConsole();
     }
 }

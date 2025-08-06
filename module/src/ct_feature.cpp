@@ -6,7 +6,7 @@
 
 namespace ct::feature {
 
-	static void drawLine(const ImVec2& from, const ImVec2& to, uint32_t color, const int width = 1) {
+	static void drawLine(const ImVec2& from, const ImVec2& to, uint32_t color, const float width = 1.0f) {
 		auto drawList = ImGui::GetBackgroundDrawList();
 		drawList->AddLine(from, to, color, width);
 	}

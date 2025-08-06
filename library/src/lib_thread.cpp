@@ -2,6 +2,7 @@
 #include "lib_memory.h"
 #include "lib_pe.h"
 #include "lib_hash.h"
+#include "lib_internal.h"
 
 #include <cstdint>
 #include <memory>
@@ -10,7 +11,7 @@ namespace cl::thread {
 
 	static uint8_t* defaultAlloc(size_t size) {
 		return reinterpret_cast<uint8_t*>(
-			VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE)
+			internal::VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE)
 		);
 	}
 
@@ -52,6 +53,6 @@ namespace cl::thread {
 		if (!cl::memory::write(enter, jmp, sizeof(jmp)))
 			return nullptr;
 
-		return CreateThread(0, 0, (LPTHREAD_START_ROUTINE)enter, param, 0, 0);
+		return internal::CreateThread(0, 0, (LPTHREAD_START_ROUTINE)enter, param, 0, 0);
 	}
 }

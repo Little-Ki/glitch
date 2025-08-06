@@ -9,7 +9,7 @@ namespace cl::pe {
 
     template<typename T>
     T getExport(hash_t module_name, hash_t proc_name) {
-        return reinterpret_cast<T>(getExport(name, proc));
+        return reinterpret_cast<T>(getExport(module_name, proc_name));
     };
 
     void* findCave(hash_t module_name, size_t size);
