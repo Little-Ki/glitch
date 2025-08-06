@@ -17,17 +17,16 @@ namespace ct::menu {
 
 	void render()
 	{
-		ImGui::SetNextWindowPos({ 100, 100 });
 		ImGui::Begin("Window");
+
+#ifdef FEATURE_WITH_MENU
+		ct::feature::execute();
+#endif
 
 		ImGui::Text("Hello");
 		ImGui::Button("World!");
 
 		ImGui::End();
-
-#ifdef FEATURE_WITH_MENU
-		ct::feature::execute();
-#endif
 	}
 
 	static LRESULT CALLBACK hkWindowProc(

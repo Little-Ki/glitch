@@ -68,9 +68,9 @@ namespace ct::menu {
 				ImGui_ImplWin32_NewFrame();
 				ImGui::NewFrame();
 
-				ImGui::ShowDemoWindow(&show_demo);
+				//ImGui::ShowDemoWindow(&show_demo);
 
-				// menu::render();
+				menu::render();
 
 				ImGui::EndFrame();
 				ImGui::Render();
