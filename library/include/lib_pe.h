@@ -3,16 +3,16 @@
 #include <string>
 
 namespace cl::pe {
-    bool getModule(const hash_t& name, void** base = nullptr, size_t* size = nullptr);
+    bool getModule(hash_t name, void** base = nullptr, size_t* size = nullptr);
 
-    void* getExport(const hash_t& name, const hash_t& proc);
+    void* getExport(hash_t module_name, hash_t proc_name);
 
     template<typename T>
-    T getExport(const hash_t& name, const hash_t& proc) {
+    T getExport(hash_t module_name, hash_t proc_name) {
         return reinterpret_cast<T>(getExport(name, proc));
     };
 
-    void* findCave(const hash_t& name, size_t size);
+    void* findCave(hash_t module_name, size_t size);
 
     bool headless(void* handle);
 }

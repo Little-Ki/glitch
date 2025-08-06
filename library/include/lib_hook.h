@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <functional>
 
+#include "lib_hash.h"
+
 namespace cl::hook {
 
 	void attach(void* entry, void* detour, std::function<uint8_t* (void*, size_t)> alloc = nullptr);

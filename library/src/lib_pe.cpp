@@ -23,7 +23,7 @@ static __forceinline PEB* GetPEB() {
 
 namespace cl::pe {
 
-	bool getModule(const hash_t& name, void** base, size_t* size) {
+	bool getModule(hash_t name, void** base, size_t* size) {
 		auto peb = GetPEB();
 
 		if (!peb) {
@@ -58,11 +58,11 @@ namespace cl::pe {
 		return false;
 	}
 
-	void* getExport(const hash_t& name, const hash_t& proc)
+	void* getExport(hash_t module_name, hash_t proc_name)
 	{
 		uint8_t* base = nullptr;
 
-		if (!getModule(name, reinterpret_cast<void**>(&base))) {
+		if (!getModule(module_name, reinterpret_cast<void**>(&base))) {
 			return nullptr;
 		}
 
@@ -78,11 +78,10 @@ namespace cl::pe {
 		auto name_table = reinterpret_cast<uint32_t*>(base + export_dir->AddressOfNames);
 		auto index_table = reinterpret_cast<uint16_t*>(base + export_dir->AddressOfNameOrdinals);
 
-
 		for (uint16_t i = 0; i < export_dir->NumberOfNames; i++) {
 			const auto name = reinterpret_cast<char*>(base + name_table[i]);
 
-			if (hash::fnv1a(name) != proc) {
+			if (hash::fnv1a(name) != proc_name) {
 				continue;
 			}
 
@@ -122,11 +121,11 @@ namespace cl::pe {
 		return true;
 	}
 
-	void* findCave(const hash_t& name, size_t size) {
+	void* findCave(hash_t module_name, size_t size) {
 
 		uint8_t* base = nullptr;
 
-		if (!getModule(name, reinterpret_cast<void**>(&base))) {
+		if (!getModule(module_name, reinterpret_cast<void**>(&base))) {
 			return nullptr;
 		}
 
