@@ -3,7 +3,6 @@
 #include "lib_memory.h"
 #include "lib_internal.h"
 
-#include <Windows.h>
 #include <iostream>
 #include <memory>
 #include <shared_mutex>
