@@ -1,7 +1,5 @@
 #include "ct_binary.h"
 
-#include "include/xorstr.hpp"
-
 namespace ct::binary {
 
 	static const uint8_t font_data[] = {

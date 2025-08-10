@@ -13,6 +13,7 @@
 #include "ct_feature.h"
 
 static void mainThread(void* handle) {
+	cl::console::allocate("Debug");
 	ct::bypass::install(handle);
 	ct::menu::install();
 	ct::feature::install();
@@ -36,7 +37,7 @@ static BOOL APIENTRY DllMain(
 	if (reason == DLL_PROCESS_ATTACH) {
 
 		cl::internal::DisableThreadLibraryCalls(handle);
-		cl::internal::SetWindowDisplayAffinity()
+		//cl::internal::SetWindowDisplayAffinity();
 		cl::thread::create(mainThread, handle);
 	}
 

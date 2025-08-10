@@ -1,3 +1,9 @@
+[submodule "third_party/imgui/imgui"]
+	path = third_party/imgui/imgui
+	url = https://github.com/ocornut/imgui.git
 [submodule "third_party/xorstr"]
 	path = third_party/xorstr
 	url = https://github.com/JustasMasiulis/xorstr.git
+[submodule "third_party/detours/detours"]
+	path = third_party/detours/detours
+	url = https://github.com/microsoft/Detours.git

@@ -4,4 +4,4 @@ project(glitch)
 
 add_subdirectory(module)
 add_subdirectory(library)
-add_subdirectory(third_party EXCLUDE_FROM_ALL)
+add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/imgui EXCLUDE_FROM_ALL)
