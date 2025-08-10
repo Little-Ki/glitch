@@ -8,13 +8,10 @@
 
 #include <Windows.h>
 #include <d3d11.h>
-#include <dxgi.h>
 #include <iostream>
 
 #include "lib_hook.h"
-
-#pragma comment(lib, "d3d11.lib")
-#pragma comment(lib, "d3dcompiler.lib")
+#include "lib_pe.h"
 
 #include "imgui.h"
 #include "imgui_impl_dx11.h"
@@ -68,8 +65,6 @@ namespace ct::menu {
 				ImGui_ImplWin32_NewFrame();
 				ImGui::NewFrame();
 
-				//ImGui::ShowDemoWindow(&show_demo);
-
 				menu::render();
 
 				ImGui::EndFrame();
@@ -92,6 +87,16 @@ namespace ct::menu {
 		D3D_FEATURE_LEVEL featureLevel;
 		DXGI_SWAP_CHAIN_DESC sd{ 0 };
 
+		const auto _D3D11CreateDeviceAndSwapChain = cl::pe::getExport<HRESULT(__stdcall*)(
+			IDXGIAdapter*, D3D_DRIVER_TYPE, HMODULE, UINT, D3D_FEATURE_LEVEL*, UINT, UINT,
+			DXGI_SWAP_CHAIN_DESC*, IDXGISwapChain**, ID3D11Device**, D3D_FEATURE_LEVEL*,
+			ID3D11DeviceContext**
+			)>(CT_HASH("d3d11.dll"), CT_HASH("D3D11CreateDeviceAndSwapChain"));
+
+		if (!_D3D11CreateDeviceAndSwapChain) {
+			return false;
+		}
+
 		sd.BufferCount = 1;
 		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -104,7 +109,7 @@ namespace ct::menu {
 		sd.SampleDesc.Count = 1;
 		sd.SampleDesc.Quality = 0;
 
-		HRESULT hr = D3D11CreateDeviceAndSwapChain(
+		HRESULT hr = _D3D11CreateDeviceAndSwapChain(
 			nullptr,
 			D3D_DRIVER_TYPE_HARDWARE,
 			nullptr, 0, nullptr, 0,

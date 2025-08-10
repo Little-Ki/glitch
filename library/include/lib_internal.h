@@ -22,4 +22,6 @@ namespace cl::internal {
 
 	BOOL DisableThreadLibraryCalls(HMODULE hLibModule);
 
+	BOOL SetWindowDisplayAffinity(HWND hWnd, DWORD dwAffinity);
+
 }

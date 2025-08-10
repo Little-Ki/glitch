@@ -16,7 +16,7 @@ static void mainThread(void* handle) {
 	ct::bypass::install(handle);
 	ct::menu::install();
 	ct::feature::install();
-	cl::pe::headless(handle);
+	//cl::pe::headless(handle);
 
 	while (!GetAsyncKeyState(VK_END));
 
@@ -24,7 +24,8 @@ static void mainThread(void* handle) {
 	ct::bypass::uninstall();
 	cl::hook::detach();
 
-	cl::internal::CreateThread(0, 0, (LPTHREAD_START_ROUTINE)FreeLibrary, handle, 0, 0);
+
+	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)FreeLibrary, handle, 0, 0);
 }
 
 static BOOL APIENTRY DllMain(
@@ -35,6 +36,7 @@ static BOOL APIENTRY DllMain(
 	if (reason == DLL_PROCESS_ATTACH) {
 
 		cl::internal::DisableThreadLibraryCalls(handle);
+		cl::internal::SetWindowDisplayAffinity()
 		cl::thread::create(mainThread, handle);
 	}
 
