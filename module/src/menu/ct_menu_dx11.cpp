@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include "lib_hook.h"
+#include "lib_vmt.h"
 #include "lib_pe.h"
 
 #include "imgui.h"
@@ -78,7 +79,7 @@ namespace ct::menu {
 			}
 		}
 
-		return cl::hook::invoke(hkPresent, self, sync_interval, flags);
+		return cl::vmt::invoke(hkPresent, self, sync_interval, flags);
 	}
 
 	bool install() {
@@ -121,19 +122,17 @@ namespace ct::menu {
 			return false;
 		}
 
-		void** vmt = *reinterpret_cast<void***>(swapchain); ;
+		cl::vmt::attach(swapchain, 8, hkPresent);
 
 		RELEASE(swapchain);
 		RELEASE(device);
-
-		cl::hook::attach(vmt[8], hkPresent);
 
 		return true;
 	}
 
 	void uninstall() {
 		menu::unwatch();
-		cl::hook::detach(hkPresent);
+		cl::vmt::detach(hkPresent);
 	}
 
 }

@@ -1,113 +1,97 @@
 #include "lib_vmt.h"
 #include "lib_memory.h"
+#include "lib_internal.h"
+
+#include <memory>
+#include <shared_mutex>
+#include <unordered_map>
 
 namespace cl::vmt {
 
-	__forceinline static size_t methodCount(uintptr_t* vmt) {
-		size_t i = 0;
-		while (cl::memory::isValid(
-			reinterpret_cast<void*>(vmt[i])
-		)) i += 1;
-		return i;
+	static std::shared_mutex mutex;
+
+	struct InterRecord {
+		void** table;
+		void* original;
+		size_t index;
+	};
+
+	static std::unordered_map<void*, InterRecord> records;
+
+	void attach(void* instance, size_t index, void* detour) {
+		std::shared_lock<std::shared_mutex> lock(mutex);
+
+		if (records.find(detour) != records.end()) {
+			return;
+		}
+
+		auto table = *reinterpret_cast<void***>(instance);
+		auto entry = &table[index];
+		auto original = *entry;
+		auto old = 0UL;
+
+		if (!cl::internal::VirtualProtect(entry, sizeof(uintptr_t), PAGE_EXECUTE_READWRITE, &old)) {
+			return;
+		}
+
+		*entry = detour;
+
+		cl::internal::VirtualProtect(entry, sizeof(uintptr_t), old, &old);
+
+		InterRecord record{ 0 };
+
+		record.table = table;
+		record.original = original;
+		record.index = index;
+
+		records[detour] = record;
 	}
 
-	VMT::~VMT() {
-		detach();
-	}
+	void detach(void* detour) {
+		std::shared_lock<std::shared_mutex> lock(mutex);
 
-	VMT::VMT(void* base)
-	{
-		_state.base = reinterpret_cast<ClassRef*>(base);
-		_state.installed = false;
+		auto it = records.find(detour);
+		auto old = 0UL;
 
-		if (_state.base) {
-			_state.original = _state.base->vmt;
+		if (it != records.end()) {
+			auto& record = it->second;
+
+			auto entry = &record.table[record.index];
+
+			if (!cl::internal::VirtualProtect(entry, sizeof(uintptr_t), PAGE_EXECUTE_READWRITE, &old)) {
+				return;
+			}
+
+			*entry = record.original;
+
+			cl::internal::VirtualProtect(entry, sizeof(uintptr_t), old, &old);
+
+			records.erase(detour);
 		}
 	}
 
-	bool VMT::attach() {
-		std::shared_lock<std::shared_mutex> lock(_state.mutex);
+	void detach() {
+		std::shared_lock<std::shared_mutex> lock(mutex);
 
-		if (_state.installed) {
-			return true;
+		for (const auto& r : records) {
+			auto& record = r.second;
+			auto entry = &record.table[record.index];
+			auto old = 0UL;
+
+			if (!cl::internal::VirtualProtect(entry, sizeof(uintptr_t), PAGE_EXECUTE_READWRITE, &old)) {
+				continue;
+			}
+
+			*entry = record.original;
+
+			cl::internal::VirtualProtect(entry, sizeof(uintptr_t), old, &old);
 		}
 
-		if (!_state.base) {
-			return false;
-		}
-
-		const auto method_count = methodCount(_state.base->vmt);
-
-		if (!method_count) {
-			return false;
-		}
-
-		_state.table.resize(method_count + 1L);
-
-		if (!_state.table.size()) {
-			return false;
-		}
-
-		std::memcpy(
-			reinterpret_cast<void*>(_state.table.data()),
-			reinterpret_cast<void*>(_state.original - 1L),
-			(method_count + 1L) * sizeof(uintptr_t));
-
-		_state.base->vmt = _state.table.data() + 1L;
-		_state.installed = true;
-		_state.count = method_count;
-
-		return true;
+		records.clear();
 	}
 
-	bool VMT::detach() {
-		std::shared_lock<std::shared_mutex> lock(_state.mutex);
-
-		if (!_state.installed) {
-			return false;
-		}
-
-		if (!_state.original || !_state.base) {
-			return false;
-		}
-
-		_state.base->vmt = _state.original;
-		_state.table.clear();
-		_state.installed = false;
-		_state.count = 0;
-
-		return true;
-	}
-
-	bool VMT::hook(size_t index, void* detour) {
-		std::shared_lock<std::shared_mutex> lock(_state.mutex);
-
-		if (!_state.installed || index >= _state.count)
-			return false;
-
-		_state.table[index] = reinterpret_cast<uintptr_t>(detour);
-
-		return true;
-	}
-
-
-	bool VMT::hook(void* function, void* detour) {
-		std::shared_lock<std::shared_mutex> lock(_state.mutex);
-
-		if (!_state.installed)
-			return false;
-
-		const size_t index = std::find(
-			_state.table.begin(),
-			_state.table.end(),
-			reinterpret_cast<uintptr_t>(function)
-		) - _state.table.begin();
-
-		if (index >= _state.count)
-			return false;
-
-		_state.table[index] = reinterpret_cast<uintptr_t>(detour);
-
-		return true;
+	void* original(void* detour) {
+		auto it = records.find(detour);
+		return it == records.end() ? nullptr : it->second.original;
 	}
 }
