@@ -11,7 +11,7 @@
 #include <dxgi.h>
 #include <iostream>
 
-#include "lib_hook.h"
+#include "lib_vmt.h"
 
 #pragma comment(lib, "d3d10.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -63,13 +63,11 @@ namespace ct::menu {
 
                 ImGui_ImplDX10_NewFrame();
                 ImGui_ImplWin32_NewFrame();
+
                 ImGui::NewFrame();
-
-                ImGui::ShowDemoWindow(&show_demo);
-
-                // menu::render();
-
+                menu::render();
                 ImGui::EndFrame();
+                
                 ImGui::Render();
 
                 device->OMSetRenderTargets(1, &rt_view, nullptr);
@@ -80,7 +78,7 @@ namespace ct::menu {
             }
         }
 
-		return cl::hook::invoke(hkPresent, self, sync_interval, flags);
+		return cl::vmt::invoke(hkPresent, self, sync_interval, flags);
     }
 
     bool install() {
@@ -111,19 +109,17 @@ namespace ct::menu {
             return false;
         }
 
-        void **vmt = *(void ***)swapchain;
+		cl::vmt::attach(swapchain, 8, hkPresent);
 
         RELEASE(swapchain);
         RELEASE(device);
-
-        cl::hook::attach(vmt[8], hkPresent);
 
         return true;
     }
 
     void uninstall() {
         menu::unwatch();
-        cl::hook::detach(hkPresent);
+		cl::vmt::detach(hkPresent);
     }
 
 }

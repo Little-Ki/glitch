@@ -11,9 +11,9 @@
 #include <dxgi.h>
 #include <iostream>
 
-#include "lib_hook.h"
+#include "lib_vmt.h"
 
-#pragma comment(lib, "d3d19.lib")
+#pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
 #include "imgui.h"
@@ -24,7 +24,7 @@ namespace ct::menu {
 
     static HRESULT __stdcall hkReset(IDirect3DDevice9 *self, D3DPRESENT_PARAMETERS *params) {
         ImGui_ImplDX9_InvalidateDeviceObjects();
-        auto result = cl::hook:::invoke(hkReset, self, params);
+        auto result = cl::vmt:::invoke(hkReset, self, params);
         ImGui_ImplDX9_CreateDeviceObjects();
 
         return result;
@@ -54,19 +54,17 @@ namespace ct::menu {
         } else {
             ImGui_ImplDX9_NewFrame();
             ImGui_ImplWin32_NewFrame();
+
             ImGui::NewFrame();
-
-            ImGui::ShowDemoWindow(&show_demo);
-
-            // menu::render();
-
+            menu::render();
             ImGui::EndFrame();
+            
             ImGui::Render();
 
             ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
         }
 
-        return cl::hook:::invoke(hkEndScene, self);
+        return cl::vmt:::invoke(hkEndScene, self);
     }
 
     bool install() {
@@ -103,13 +101,11 @@ namespace ct::menu {
             return false;
         }
 
-        void **vmt = *(void ***)device;
+        cl::vmt::attach(device, 16, hkReset);
+        cl::vmt::attach(device, 42, hkEndScene);
 
         RELEASE(device);
         RELEASE(dx9);
-
-        cl::hook::attach(vmt[16], hkReset);
-        cl::hook::attach(vmt[42], hkEndScene);
 
         return true;
     }

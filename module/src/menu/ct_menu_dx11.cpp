@@ -10,7 +10,6 @@
 #include <d3d11.h>
 #include <iostream>
 
-#include "lib_hook.h"
 #include "lib_vmt.h"
 #include "lib_pe.h"
 

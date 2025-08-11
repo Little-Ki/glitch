@@ -9,13 +9,11 @@
 
 namespace cl::thread {
 
-	static uint8_t* defaultAlloc(size_t size) {
-		return reinterpret_cast<uint8_t*>(
-			internal::VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE)
-		);
+	static void* defaultAlloc(size_t size) {
+		return internal::VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 	}
 
-	HANDLE create(void* function, void* param, std::function<uint8_t* (size_t)> alloc) {
+	HANDLE create(void* function, void* param, std::function<void* (size_t)> alloc) {
 
 		void* enter = nullptr;
 
@@ -54,5 +52,5 @@ namespace cl::thread {
 			return nullptr;
 
 		return internal::CreateThread(0, 0, (LPTHREAD_START_ROUTINE)enter, param, 0, 0);
+		}
 	}
-}

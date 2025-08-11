@@ -12,7 +12,7 @@
 #include <iostream>
 #include <vector>
 
-#include "lib_hook.h"
+#include "lib_vmt.h"
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -24,7 +24,6 @@
 namespace ct::menu {
 
     struct D3D12Environment {
-
         struct FrameContext {
             ID3D12CommandAllocator *command_allocator;
             ID3D12Resource *resource;
@@ -50,7 +49,7 @@ namespace ct::menu {
             env.command_queue = sc;
         }
 
-		return cl::hook::invoke(hkExecuteCommandList, sc, count, list);
+        return cl::vmt::invoke(hkExecuteCommandList, sc, count, list);
     }
 
     static HRESULT __stdcall hkPresent(IDXGISwapChain3 *sc, UINT interval, UINT flags) {
@@ -79,7 +78,7 @@ namespace ct::menu {
                     env.frames.resize(desc.BufferCount);
 
                     if (device->CreateDescriptorHeap(&hd, IID_PPV_ARGS(&env.desc_imgui_render)) != S_OK)
-                        return oPresent(sc, interval, flags);
+                        goto exit;
                 }
 
                 {
@@ -89,12 +88,12 @@ namespace ct::menu {
                     hd.NodeMask = 1;
 
                     if (device->CreateDescriptorHeap(&hd, IID_PPV_ARGS(&env.desc_back_buffer)) != S_OK)
-                        return oPresent(sc, interval, flags);
+                        goto exit;
                 }
 
                 ID3D12CommandAllocator *cmd_allocator;
                 if (device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&cmd_allocator)) != S_OK)
-                    return oPresent(sc, interval, flags);
+                    goto exit;
 
                 for (size_t i = 0; i < desc.BufferCount; i++) {
                     env.frames[i].command_allocator = cmd_allocator;
@@ -102,7 +101,7 @@ namespace ct::menu {
 
                 if (device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmd_allocator, NULL, IID_PPV_ARGS(&env.command_list)) != S_OK ||
                     env.command_list->Close() != S_OK)
-                    return oPresent(sc, interval, flags);
+                    goto exit;
 
                 const auto rtv_desc_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
                 D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = env.desc_back_buffer->GetCPUDescriptorHandleForHeapStart();
@@ -145,12 +144,9 @@ namespace ct::menu {
 
                 ImGui_ImplDX12_NewFrame();
                 ImGui_ImplWin32_NewFrame();
+
                 ImGui::NewFrame();
-
-                ImGui::ShowDemoWindow(&show_demo);
-
-                // menu::render();
-
+                menu::render();
                 ImGui::EndFrame();
 
                 auto &frame = env.frames[sc->GetCurrentBackBufferIndex()];
@@ -183,12 +179,11 @@ namespace ct::menu {
             }
         }
 
-        
-		return cl::hook::invoke(hkPresent, sc, interval, flags);
+    exit:
+        return cl::vmt::invoke(hkPresent, sc, interval, flags);
     }
 
     bool install() {
-
         IDXGIFactory *factory = nullptr;
         IDXGIAdapter *adapter = nullptr;
         ID3D12Device *device = nullptr;
@@ -250,18 +245,14 @@ namespace ct::menu {
             goto fail;
         }
 
-        void **vmt0 = *(void ***)swapchain;
-        void **vmt1 = *(void ***)cmd_queue;
+        cl::vmt::attach(swapchain, 8, hkPresent);
+        cl::vmt::attach(cmd_queue, 10, hkExecuteCommandList);
 
         RELEASE(device);
         RELEASE(cmd_queue);
         RELEASE(cmd_allocator);
         RELEASE(cmd_list);
         RELEASE(swapchain);
-
-        cl::hook::attach(vmt0[8], hkPresent);
-        cl::hook::attach(vmt1[10], hkExecuteCommandList);
-
         return true;
 
     fail:
@@ -275,8 +266,8 @@ namespace ct::menu {
 
     void uninstall() {
         menu::unwatch();
-        cl::hook::detach(hkPresent);
-        cl::hook::detach(hkExecuteCommandList);
+        cl::vmt::detach(hkPresent);
+        cl::vmt::detach(hkExecuteCommandList);
     }
 
 }

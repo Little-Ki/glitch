@@ -2,66 +2,53 @@
 #include "lib_memory.h"
 
 #include <algorithm>
+#include <sstream>
 #include <cassert>
 #include <cctype>
-#include <cstring>
-
-using namespace cl::memory;
+#include <stdexcept>
+#include <string>
 
 namespace cl::scanner {
 
     Pattern::Pattern(const std::string &pattern) {
-        uint8_t value = 0;
+        std::istringstream iss(pattern);
+        std::string token;
 
-        auto xdigit = [](char c) {
-            c = std::tolower(c);
-            return std::isxdigit(c) ? ((c >= '0' && c <= '9') ? (c - '0') : (c - 'a' + 10)) : 0;
-        };
+        while (iss >> token) {
+            if (token.size() != 2 ||
+                !std::isxdigit(token[0]) ||
+                !std::isxdigit(token[1])) {
 
-        for (const auto &c : pattern) {
-            if (c == '?') {
-                _elements.push_back({});
-            } else if (std::isxdigit(c)) {
-                value = (value << 4) | xdigit(c);
-            } else {
-                _elements.push_back({value});
-                value = 0U;
+                if (token == "??" ||
+                    (token.size() == 2 && token[0] == '?') ||
+                    (token.size() == 2 && token[1] == '?')) {
+                    _elements.push_back(Element{0, true});
+                    continue;
+                }
+
+                throw std::runtime_error("Invalid pattern token: " + token);
             }
-        }
 
-        if (value) {
-            _elements.push_back({value});
+            uint8_t byte = static_cast<uint8_t>(std::stoul(token, nullptr, 16));
+            _elements.push_back(Element{byte, false});
         }
     }
 
-    uintptr_t search(uint8_t *begin, uint8_t *end, const Pattern &pattern, uint32_t offset, bool safe) {
+    void *search(void *begin, void *end, const Pattern &pattern, uint32_t offset) {
         assert(begin <= end && !pattern.empty());
 
-        if (safe) {
-            auto it = std::search(
-                Address<uint8_t>(begin), Address<uint8_t>(end),
-                pattern.begin(), pattern.end(),
-                [](const uint8_t *a, const Pattern::Element &b) {
-                    return isValid(a) && (b.is_wild || b.byte == *a);
-                });
+        auto it = std::search(
+            reinterpret_cast<uint8_t *>(begin),
+            reinterpret_cast<uint8_t *>(end),
+            pattern.begin(), pattern.end(),
+            [](const uint8_t a, const Pattern::Element &b) {
+                return b.is_wild || b.byte == a;
+            });
 
-            if (it == end)
-                return 0;
+        if (it == end)
+            return nullptr;
 
-            return reinterpret_cast<uintptr_t>(*it) + offset;
-        } else {
-            auto it = std::search(
-                begin, end,
-                pattern.begin(), pattern.end(),
-                [](const uint8_t a, const Pattern::Element &b) {
-                    return b.is_wild || b.byte == a;
-                });
-
-            if (it == end)
-                return 0;
-
-            return reinterpret_cast<uintptr_t>(it) + offset;
-        }
+        return it + offset;
     }
-	
+
 }
