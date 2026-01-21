@@ -64,7 +64,7 @@ namespace ct::menu {
             ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
         }
 
-        return cl::vmt:::invoke(hkEndScene, self);
+        return cl::vmt::invoke(hkEndScene, self);
     }
 
     bool install() {
